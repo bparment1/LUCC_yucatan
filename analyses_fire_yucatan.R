@@ -123,6 +123,9 @@ data_CI$FIRE_freq <- colSums(data_CI[,fire_modis_col])
 data_CI$FIRE_intensity <- data_CI$fire_freq/8
 data_CI$FIRE_bool <- data_CI$FIRE_freq > 0
 
+hist(data_CI$fpnfpch)
+table(data_CI$fpnfpch)
+
 #### Run modeling series A ###
 
 #run overall but also state by state
@@ -159,6 +162,19 @@ mod8a <- multinom(fpnfpch ~ cy_q + FIRE_freq +
 #extract slope of fire?
 #
 list_moda <- list(mod1a,mod2a,mod3a,mod4a,mod5a,mod6a,mod7a,mod8a)
+AIC_values <- unlist(lapply(list_moda,function(x){x$AIC}))
+AIC_values <- unlist(lapply(list_moda,function(x){x$AIC}))
+
+mod_names <-  c("mod1a","mod2a","mod3a","mod4a","mod5a","mod6a","mod7a","mod8a")
+df_mod <- data.frame(mod_names=mod_names,AIC=AIC_values)
+barplot(df_mod$AIC,names="mod_names",names.arg=mod_names)
+
+> mod2a$coefnames
+[1] "(Intercept)" "cy_q"        "FIRE_pre07" 
+> coefficients(mod2a)
+(Intercept)      cy_q FIRE_pre07
+2  -0.1389069 -0.382720  0.2230844
+3  -2.2844927 -3.746468  0.1316694
 
 ############### END OF SCRIPT ###################
 

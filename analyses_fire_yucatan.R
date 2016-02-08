@@ -81,6 +81,8 @@ create_out_dir_param=TRUE #PARAM9
 
 data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.xlsx" #contains the whole dataset
 data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/yucatan_fire.xlsx" #contains the whole dataset
+#data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/data_CI_02062016.txt" #contains the whole dataset
+
 coord_names <- c("POINT_X","POINT_Y") #PARAM 11
 
 ################# START SCRIPT ###############################
@@ -102,9 +104,9 @@ if(create_out_dir_param==TRUE){
 
 #Import data from excel
 #data_Hansen <-read.xls(data_Hansen_fname, sheet=1)
-#data_CI <-read.xls(data_CI_fname, sheet=1)
+data_CI <-read.xls(data_CI_fname, sheet=1)
 #data_Hansen <-read.xls(data_Hansen_fname, sheet=1)
-data_CI <-read.table(data_CI_fname, sheet=1)
+data_CI <-read.table(data_CI_fname)
 
 #write.table(data_Hansen,file.path(in_dir,"data_Hansen_02062016.txt"),sep=",")
 write.table(data_CI,file.path(in_dir,"data_CI_02062016.txt"),sep=",")
@@ -120,7 +122,7 @@ spplot(data_CI_spdf,"dist_roads")
 #Create the count variable
 fire_modis_col <- c("FIRE_2000","FIRE_2001","FIRE_2002","FIRE_2003","FIRE_2004","FIRE_2005","FIRE_2006","FIRE_2007")
 data_CI$FIRE_freq <- colSums(data_CI[,fire_modis_col])
-data_CI$FIRE_intensity <- data_CI$fire_freq/8
+data_CI$FIRE_intensity <- data_CI$FIRE_freq/8
 data_CI$FIRE_bool <- data_CI$FIRE_freq > 0
 
 hist(data_CI$fpnfpch)
@@ -161,22 +163,34 @@ mod8a <- multinom(fpnfpch ~ cy_q + FIRE_freq +
 #extract the AIC and formula!!!
 #extract slope of fire?
 #
+
 list_moda <- list(mod1a,mod2a,mod3a,mod4a,mod5a,mod6a,mod7a,mod8a)
 AIC_values <- unlist(lapply(list_moda,function(x){x$AIC}))
-AIC_values <- unlist(lapply(list_moda,function(x){x$AIC}))
+list_coef <- lapply(list_moda,function(x){summary(x)$coefficients})
 
 mod_names <-  c("mod1a","mod2a","mod3a","mod4a","mod5a","mod6a","mod7a","mod8a")
 df_mod <- data.frame(mod_names=mod_names,AIC=AIC_values)
 barplot(df_mod$AIC,names="mod_names",names.arg=mod_names)
 
-> mod2a$coefnames
-[1] "(Intercept)" "cy_q"        "FIRE_pre07" 
-> coefficients(mod2a)
-(Intercept)      cy_q FIRE_pre07
-2  -0.1389069 -0.382720  0.2230844
-3  -2.2844927 -3.746468  0.1316694
+##Note that multinom does not calculate p-values but we can carry out a Wald test...
+
+#> mod2a$coefnames
+#[1] "(Intercept)" "cy_q"        "FIRE_pre07" 
+#> coefficients(mod2a)
+#(Intercept)      cy_q FIRE_pre07
+#2  -0.1389069 -0.382720  0.2230844
+#3  -2.2844927 -3.746468  0.1316694
+
+z <- summary(mod8a)$coefficients/summary(mod8a)$standard.errors
+z
+
+#2-tailed z test
+p <- (1 - pnorm(abs(z), 0, 1))*2
+p
 
 ############### END OF SCRIPT ###################
 
 #http://www.r-bloggers.com/r-code-example-for-neural-networks/
 #http://www.ats.ucla.edu/stat/r/dae/mlogit.htm
+
+

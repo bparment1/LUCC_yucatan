@@ -6,11 +6,11 @@
 #
 #AUTHOR: Benoit Parmentier, Marco Millones                                                                      #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 02/06/2016
+#DATE MODIFIED: 02/12/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan, Marco Millones
 #   
-#COMMENTS: Initial commit
+#COMMENTS:  Separation between function script and main script
 #TODO:
 
 #################################################################################################
@@ -39,29 +39,9 @@ library(mlogit)                          # maximum liklihood estimation and mult
 
 ###### Functions used in this script
 
-create_dir_fun <- function(outDir,out_suffix){
-  #if out_suffix is not null then append out_suffix string
-  if(!is.null(out_suffix)){
-    out_name <- paste("output_",out_suffix,sep="")
-    outDir <- file.path(outDir,out_name)
-  }
-  #create if does not exists
-  if(!file.exists(outDir)){
-    dir.create(outDir)
-  }
-  return(outDir)
-}
-
-#Used to load RData object saved within the functions produced.
-load_obj <- function(f){
-  env <- new.env()
-  nm <- load(f, env)[1]
-  env[[nm]]
-}
-
-#function_spatial_regression_analyses <- "SPatial_analysis_spatial_reg_05172015_functions.R" #PARAM 1
-#script_path <- "/home/parmentier/Data/Space_beats_time/sbt_scripts" #path to script #PARAM 2
-#source(file.path(script_path,function_spatial_regression_analyses)) #source all functions used in this script 1.
+functions_analyses_script <- "analyses_fire_yucatan_functions_02122016.R" #PARAM 1
+script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
+source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
 
 #####  Parameters and argument set up ###########
 
@@ -80,9 +60,9 @@ out_suffix <-"yucatan_analyses_02062016" #output suffix for the files and ouptu 
 create_out_dir_param=TRUE #PARAM9
 
 data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.xlsx" #contains the whole dataset
-data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/yucatan_fire.xlsx" #contains the whole dataset
-#data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/data_CI_02062016.txt" #contains the whole dataset
-
+#data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/yucatan_fire.xlsx" #contains the whole dataset
+data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/yucatan_fire.csv" #contains the whole dataset
+#data_CI_02062016.txt
 coord_names <- c("POINT_X","POINT_Y") #PARAM 11
 
 ################# START SCRIPT ###############################
@@ -104,12 +84,12 @@ if(create_out_dir_param==TRUE){
 
 #Import data from excel
 #data_Hansen <-read.xls(data_Hansen_fname, sheet=1)
-data_CI <-read.xls(data_CI_fname, sheet=1)
+#data_CI <-read.xls(data_CI_fname, sheet=1)
 #data_Hansen <-read.xls(data_Hansen_fname, sheet=1)
-data_CI <-read.table(data_CI_fname)
+data_CI <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
 
 #write.table(data_Hansen,file.path(in_dir,"data_Hansen_02062016.txt"),sep=",")
-write.table(data_CI,file.path(in_dir,"data_CI_02062016.txt"),sep=",")
+#write.table(data_CI,file.path(in_dir,"data_CI_02062016.txt"),header=T,sep=",")
 
 data_CI_spdf <- data_CI
 coordinates(data_CI_spdf) <- coord_names
@@ -131,43 +111,65 @@ table(data_CI$fpnfpch)
 #### Run modeling series A ###
 
 #run overall but also state by state
-mod1a <- multinom(fpnfpch ~ cy_q , data = data_CI)
-mod2a <- multinom(fpnfpch ~ cy_q + FIRE_pre07, data = data_CI)
-mod3a <- multinom(fpnfpch ~ cy_q + FIRE_intensity, data = data_CI)
-mod4a <- multinom(fpnfpch ~ cy_q + FIRE_bool, data = data_CI)
 
-mod5a <- multinom(fpnfpch ~ cy_q +  
-                            dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
-                            elevation + slope_deg + landcover + cattledensity + ejido + 
-                            popdens_change + precip + protegidas + soil
-                            , data = data_CI)
+#make this a function?
 
-mod6a <- multinom(fpnfpch ~ cy_q + FIRE_pre07 + 
-                    dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
-                    elevation + slope_deg + landcover + cattledensity + ejido + 
-                    popdens_change + precip + protegidas + soil
-                  , data = data_CI)
+list_models<-c("y_var ~ cy_q",
+               "y_var ~ cy_q + FIRE_pre07",
+               "y_var ~ cy_q + FIRE_intensity",
+               "y_var ~ cy_q + FIRE_bool",
+               "y_var ~ cy_q +  
+                      dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+                      elevation + slope_deg + landcover + cattledensity + ejido + 
+                      popdens_change + precip + protegidas + soil",
+               "y_var ~ cy_q + FIRE_pre07 + 
+                      dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+                      elevation + slope_deg + landcover + cattledensity + ejido + 
+                      popdens_change + precip + protegidas + soil",
+               "y_var ~ cy_q + FIRE_intensity + 
+                      dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+                      elevation + slope_deg + landcover + cattledensity + ejido + 
+                      popdens_change + precip + protegidas + soil",
+               "y_var ~ cy_q + FIRE_freq + 
+                      dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+                      elevation + slope_deg + landcover + cattledensity + ejido + 
+                      popdens_change + precip + protegidas + soil"
+               )
 
-mod7a <- multinom(fpnfpch ~ cy_q + FIRE_intensity + 
-                    dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
-                    elevation + slope_deg + landcover + cattledensity + ejido + 
-                    popdens_change + precip + protegidas + soil
-                  , data = data_CI)
+y_var_name <- "fpnfpch"
+debug(run_multinom_mod)
+list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name ,data_df=data_CI)
 
-mod8a <- multinom(fpnfpch ~ cy_q + FIRE_freq + 
-                    dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
-                    elevation + slope_deg + landcover + cattledensity + ejido + 
-                    popdens_change + precip + protegidas + soil
-                  , data = data_CI)
-
-#extract the AIC and formula!!!
-#extract slope of fire?
-#
-
-list_moda <- list(mod1a,mod2a,mod3a,mod4a,mod5a,mod6a,mod7a,mod8a)
-AIC_values <- unlist(lapply(list_moda,function(x){x$AIC}))
-list_coef <- lapply(list_moda,function(x){summary(x)$coefficients})
-
+  
+# mod1a <- multinom(fpnfpch ~ cy_q , data = data_CI)
+# mod2a <- multinom(fpnfpch ~ cy_q + FIRE_pre07, data = data_CI)
+# mod3a <- multinom(fpnfpch ~ cy_q + FIRE_intensity, data = data_CI)
+# mod4a <- multinom(fpnfpch ~ cy_q + FIRE_bool, data = data_CI)
+#   
+# mod5a <- multinom(fpnfpch ~ cy_q +  
+#                       dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+#                       elevation + slope_deg + landcover + cattledensity + ejido + 
+#                       popdens_change + precip + protegidas + soil
+#                     , data = data_CI)
+#   
+# mod6a <- multinom(fpnfpch ~ cy_q + FIRE_pre07 + 
+#                       dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+#                       elevation + slope_deg + landcover + cattledensity + ejido + 
+#                       popdens_change + precip + protegidas + soil
+#                     , data = data_CI)
+#   
+# mod7a <- multinom(fpnfpch ~ cy_q + FIRE_intensity + 
+#                       dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+#                       elevation + slope_deg + landcover + cattledensity + ejido + 
+#                       popdens_change + precip + protegidas + soil
+#                     , data = data_CI)
+#   
+# mod8a <- multinom(fpnfpch ~ cy_q + FIRE_freq + 
+#                       dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+#                       elevation + slope_deg + landcover + cattledensity + ejido + 
+#                       popdens_change + precip + protegidas + soil
+#                     , data = data_CI)
+  
 mod_names <-  c("mod1a","mod2a","mod3a","mod4a","mod5a","mod6a","mod7a","mod8a")
 df_mod <- data.frame(mod_names=mod_names,AIC=AIC_values)
 barplot(df_mod$AIC,names="mod_names",names.arg=mod_names)
@@ -192,5 +194,5 @@ p
 
 #http://www.r-bloggers.com/r-code-example-for-neural-networks/
 #http://www.ats.ucla.edu/stat/r/dae/mlogit.htm
-
+#http://data.princeton.edu/wws509/r/c6s2.html
 

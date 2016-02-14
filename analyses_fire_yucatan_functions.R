@@ -6,7 +6,7 @@
 #
 #AUTHOR: Benoit Parmentier, Marco Millones                                                                      #
 #DATE CREATED: 02/12/2016 
-#DATE MODIFIED: 02/12/2016
+#DATE MODIFIED: 02/14/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan, Marco Millones
 #   
@@ -59,11 +59,15 @@ load_obj <- function(f){
   env[[nm]]
 }
 
-run_multinom_mod <- function(list_models,model_type="multinom",y_var_name,data_df){
+run_multinom_mod <- function(list_models,model_type="multinom",y_var_name,data_df,ref_var_name=NULL){
   ##
-  
+  if(!is.null(ref_var_name)){
+    data_df$y_var <- relevel(data_df[[y_var_name]], ref = ref_var_name)
+  }else{
+    data_df$y_var <- data_df[[y_var_name]]
+  }
   list_formulas<-lapply(list_models,as.formula,env=.GlobalEnv) #mulitple arguments passed to lapply!!
-  data_df$y_var <- data_df[[y_var_name]]
+
   #formula_obj
   #run_multinom <- function(data_df,formula_obj){
   if(model_type=="multinom"){
@@ -78,6 +82,7 @@ run_multinom_mod <- function(list_models,model_type="multinom",y_var_name,data_d
 extraction_of_information <- function(list_mod){
   
   #list_moda <- list(mod1a,mod2a,mod3a,mod4a,mod5a,mod6a,mod7a,mod8a)
+  #lapply(list_mod,function(x))
   AIC_values <- unlist(lapply(list_mod,function(x){x$AIC}))
   list_coef <- lapply(list_mod,function(x){summary(x)$coefficients})
   list_formulas <- lapply(list_mod,function(x){summary(x)$formula})
@@ -85,6 +90,7 @@ extraction_of_information <- function(list_mod){
   names(multinom_extract_obj) <- c("AIC_values","list_coef","list_formulas")
   return(multinom_extract_obj)
 }
+
 
 ############### END OF SCRIPT ###################
 

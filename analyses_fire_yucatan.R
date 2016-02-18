@@ -122,7 +122,7 @@ data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
 fire_modis_col <- c("FIRE_2000","FIRE_2001","FIRE_2002","FIRE_2003","FIRE_2004","FIRE_2005","FIRE_2006","FIRE_2007")
 data_df$FIRE_freq <- colSums(data_df[,fire_modis_col])
 data_df$FIRE_intensity <- data_df$FIRE_freq/8
-data_df_spdf$FIRE_bool <- data_df$FIRE_freq > 0
+data_df$FIRE_bool <- data_df$FIRE_freq > 0
 
 data_df_spdf <- data_df
 coordinates(data_df_spdf) <- coord_names
@@ -148,7 +148,6 @@ spplot(data_df_spdf,"cattledensity")
 spplot(data_df_spdf,"FIRE_pre07")
 spplot(data_df_spdf,"dist_roads")
 spplot(data_df_spdf,"state")
-
 
 hist(data_df[[y_var_name]])
 table(data_df[[y_var_name]])
@@ -177,14 +176,19 @@ list_mod_obj <- vector("list",length=length(unique_val_y_var))
 for(i in 1:length(unique_val_y_var)){
   ref_var_name <- unique_val_y_var[i]
   #debug(run_multinom_mod)
-  list_mod_obj[[i]] <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name=ref_var_name)
+  list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name=ref_var_name)
+  names(list_mod) <- paste("ref_",ref_var_name)
+  names_mod_obj <- file.path(".",paste("list_mod_","ref_",ref_var_name,"_",out_suffix_s,".RData",sep=""))
+  save(list_mod,file= names_mod_obj)
+  
+  list_mod_obj[[i]]<- list_mod
 }
 
-mod_names <-  c("mod1a","mod2a","mod3a","mod4a","mod5a","mod6a","mod7a","mod8a")
-df_mod <- data.frame(mod_names=mod_names,AIC=AIC_values)
-barplot(df_mod$AIC,names="mod_names",names.arg=mod_names)
+#mod_names <-  c("mod1a","mod2a","mod3a","mod4a","mod5a","mod6a","mod7a","mod8a")
+#df_mod <- data.frame(mod_names=mod_names,AIC=AIC_values)
+#barplot(df_mod$AIC,names="mod_names",names.arg=mod_names)
 #debug(extraction_of_information)
-test <- extraction_of_information(list_mod)
+#test <- extraction_of_information(list_mod)
   
 ##Note that multinom does not calculate p-values but we can carry out a Wald test...
 

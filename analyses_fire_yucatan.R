@@ -36,6 +36,7 @@ library(nnet)                            # Contains multinom and neural net func
 library(ggplot2)                         # plotting package
 library(reshape2)                        # data wrangling
 library(mlogit)                          # maximum liklihood estimation and multinomial model
+library(parallel)                        # parralel programming and multi cores
 
 ###### Functions used in this script
 
@@ -68,6 +69,7 @@ zonal_var_name <- "state" #name of the variable to use to run the model by zone,
 y_var_name <- "fpnfpch"
 ref_var_name <- ""
 run_relevel <- TRUE
+num_cores <- 3
 
 list_models<-c("y_var ~ cy_q",
                "y_var ~ cy_q + FIRE_pre07",
@@ -170,7 +172,50 @@ if(run_relevel==TRUE){
 debug(multinomial_model_fun)
 
 test_model_obj <- multinomial_model_fun(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir)
+
+run_multinom_mod_mc <- function(i,list_param){
+  #This function runs multinomial model using mclapply
+  #
+  #
+  #Inputs:
   
+  #Start script
+  list_models <- list_param$list_models
+  model_type <- list_param$model_type
+  y_var_name <- list_param$y_var_name
+  data_df <- list_param$data_df
+  unique_val_y_var <- list_param$unique_val_y_var
+  #ref_var_name <- list_param$ref_var_name
+  out_suffix_s <- list_param$out_suffix
+  out_dir <- list_param$out_dir
+  
+  ref_var_name <- unique_val_y_var[i]
+  #out_suffix_s <- out_suffix_s[i]
+  
+  #test<- mclapply(1:length(unique_val_y_var),FUN=run_multinom_mod,list_models=list_models,
+  #                model_type="multinom",y_var_name=y_var_name,data_df=data_df_spdf,ref_var_name=unique_val_y_var,
+  #                mc.preschedule=FALSE,mc.cores = num_cores)
+  
+  #debug(run_multinom_mod)
+  list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name=ref_var_name)
+  names(list_mod) <- paste("ref_",ref_var_name)
+  names_mod_obj <- file.path(".",paste("list_mod_","ref_",ref_var_name,"_",out_suffix_s,".RData",sep=""))
+  save(list_mod,file= names_mod_obj)
+  
+  #for(i in 1:length(unique_val_y_var)){
+  #  ref_var_name <- unique_val_y_var[i]
+  #  #debug(run_multinom_mod)
+  #  list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name=ref_var_name)
+  #   names(list_mod) <- paste("ref_",ref_var_name)
+  # names_mod_obj <- file.path(".",paste("list_mod_","ref_",ref_var_name,"_",out_suffix_s,".RData",sep=""))
+  # save(list_mod,file= names_mod_obj)
+  
+  #  list_mod_obj[[i]]<- list_mod
+  #}
+  #
+  return(list_mod)
+}
+
 multinomial_model_fun<-function(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir){
   #This function runs multinomial models 
   #Inputs:
@@ -198,48 +243,6 @@ multinomial_model_fun<-function(list_models,model_type="multinom",y_var_name,dat
   
   #list_mod_obj <- vector("list",length=length(unique_val_y_var))
   #list_models,model_type="multinom",y_var_name,data_df,ref_var_name=NULL
-  run_multinom_mod_mc <- function(i,list_param){
-    #This function runs multinomial model using mclapply
-    #
-    #
-    #Inputs:
-    
-    #Start script
-    list_models <- list_param$list_models
-    model_type <- list_param$model_type
-    y_var_name <- list_param$y_var_name
-    data_df <- list_param$data_df
-    unique_val_y_var <- list_param$unique_val_y_var
-    #ref_var_name <- list_param$ref_var_name
-    out_suffix_s <- list_param$out_suffix
-    out_dir <- list_param$out_dir
-    
-    ref_var_name <- unique_val_y_var[i]
-    #out_suffix_s <- out_suffix_s[i]
-    
-    #test<- mclapply(1:length(unique_val_y_var),FUN=run_multinom_mod,list_models=list_models,
-    #                model_type="multinom",y_var_name=y_var_name,data_df=data_df_spdf,ref_var_name=unique_val_y_var,
-    #                mc.preschedule=FALSE,mc.cores = num_cores)
-    
-    #debug(run_multinom_mod)
-    list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name=ref_var_name)
-    names(list_mod) <- paste("ref_",ref_var_name)
-    names_mod_obj <- file.path(".",paste("list_mod_","ref_",ref_var_name,"_",out_suffix_s,".RData",sep=""))
-    save(list_mod,file= names_mod_obj)
-    
-    #for(i in 1:length(unique_val_y_var)){
-    #  ref_var_name <- unique_val_y_var[i]
-    #  #debug(run_multinom_mod)
-    #  list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name=ref_var_name)
-    #   names(list_mod) <- paste("ref_",ref_var_name)
-    # names_mod_obj <- file.path(".",paste("list_mod_","ref_",ref_var_name,"_",out_suffix_s,".RData",sep=""))
-    # save(list_mod,file= names_mod_obj)
-      
-    #  list_mod_obj[[i]]<- list_mod
-    #}
-    #
-    retunr(list_mod)
-  }
   
   #out_suffix_s <- 
   list_param_multinom <- list(list_models,model_type,y_var_name,data_df,unique_val_y_var,out_suffix_s,out_dir)

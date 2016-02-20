@@ -6,7 +6,7 @@
 #
 #AUTHOR: Benoit Parmentier, Marco Millones                                                                      #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 02/14/2016
+#DATE MODIFIED: 02/20/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan, Marco Millones
 #   
@@ -40,7 +40,7 @@ library(parallel)                        # parralel programming and multi cores
 
 ###### Functions used in this script
 
-functions_analyses_script <- "analyses_fire_yucatan_functions_02142016.R" #PARAM 1
+functions_analyses_script <- "analyses_fire_yucatan_functions_02202016.R" #PARAM 1
 script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
 source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
 
@@ -57,7 +57,7 @@ CRS_reg <- CRS_WGS84 # PARAM 4
 file_format <- ".rst" #PARAM5
 NA_value <- -9999 #PARAM6
 NA_flag_val <- NA_value #PARAM7
-out_suffix <-"yucatan_analyses_02142016" #output suffix for the files and ouptu folder #PARAM 8
+out_suffix <-"yucatan_CI_analyses_02202016" #output suffix for the files and ouptu folder #PARAM 8
 create_out_dir_param=TRUE #PARAM9
 state_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/IN_QGIS/State_dis_from_muni.shp"
 data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.xlsx" #contains the whole dataset
@@ -169,94 +169,23 @@ if(run_relevel==TRUE){
 #lapply() loop through unique val zones later!!
 #subset(data_df, state=="")
 #ref_var_name <- 1
-debug(multinomial_model_fun)
+#debug(multinomial_model_fun)
 
-test_model_obj <- multinomial_model_fun(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir)
+#Run for the overall state
+out_suffix_s <- paste("overall_",out_suffix,sep="")
+data_df_overall_model_obj <- multinomial_model_fun(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir)
 
-run_multinom_mod_mc <- function(i,list_param){
-  #This function runs multinomial model using mclapply
-  #
-  #
-  #Inputs:
+unique_val_zones <- (unique(data_df_spdf[[zonal_var_name]]))
+unique_val_zones <- unique_val_zones[!is.na(unique_val_zones)]
+
+#> unique_val_zones
+#[1] "Yucatan"      "Quintana Roo" "Campeche"
+for(i in 1:length(unique_val_zones)){
+ 
+  out_suffix_s <- paste(unique_val_zones[i],out_suffix,sep="")
+  data_df_by_region_model_obj <- multinomial_model_fun(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir)
   
-  #Start script
-  list_models <- list_param$list_models
-  model_type <- list_param$model_type
-  y_var_name <- list_param$y_var_name
-  data_df <- list_param$data_df
-  unique_val_y_var <- list_param$unique_val_y_var
-  #ref_var_name <- list_param$ref_var_name
-  out_suffix_s <- list_param$out_suffix
-  out_dir <- list_param$out_dir
-  
-  ref_var_name <- unique_val_y_var[i]
-  #out_suffix_s <- out_suffix_s[i]
-  
-  #test<- mclapply(1:length(unique_val_y_var),FUN=run_multinom_mod,list_models=list_models,
-  #                model_type="multinom",y_var_name=y_var_name,data_df=data_df_spdf,ref_var_name=unique_val_y_var,
-  #                mc.preschedule=FALSE,mc.cores = num_cores)
-  
-  #debug(run_multinom_mod)
-  list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name=ref_var_name)
-  names(list_mod) <- paste("ref_",ref_var_name)
-  names_mod_obj <- file.path(".",paste("list_mod_","ref_",ref_var_name,"_",out_suffix_s,".RData",sep=""))
-  save(list_mod,file= names_mod_obj)
-  
-  #for(i in 1:length(unique_val_y_var)){
-  #  ref_var_name <- unique_val_y_var[i]
-  #  #debug(run_multinom_mod)
-  #  list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name=ref_var_name)
-  #   names(list_mod) <- paste("ref_",ref_var_name)
-  # names_mod_obj <- file.path(".",paste("list_mod_","ref_",ref_var_name,"_",out_suffix_s,".RData",sep=""))
-  # save(list_mod,file= names_mod_obj)
-  
-  #  list_mod_obj[[i]]<- list_mod
-  #}
-  #
-  return(list_mod)
 }
-
-multinomial_model_fun<-function(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir){
-  #This function runs multinomial models 
-  #Inputs:
-  #1)list_models: list of models formul as string/character
-  #2)model_type: currently only "multinom"
-  #3)y_var_name: name of the variable to use as dependent variable
-  #4)data_df: data.frame containing the variables
-  #5)ref_var_name: reference name for the multinomial model
-  #6)zonal_var_name: stratum used to run models as subset
-  #7)num_cores: number of cores to use
-  #8)out_suffix_s: output suffix
-  #9)out_dir: output dir used in the work
-  #Output:
-  #
-  
-  ### Start of script ###
-  
-  unique_val_zones <- (unique(data_df_spdf[[zonal_var_name]]))
-  unique_val_zones <- unique_val_zones[!is.na(unique_val_zones)]
-  unique_val_y_var <- (unique(data_df_spdf[[y_var_name]]))
-  unique_val_y_var <- order(unique_val_zones[!is.na(unique_val_y_var)],decreasing = TRUE) #values 1,2,3
-  
-  #
-  #
-  
-  #list_mod_obj <- vector("list",length=length(unique_val_y_var))
-  #list_models,model_type="multinom",y_var_name,data_df,ref_var_name=NULL
-  
-  #out_suffix_s <- 
-  list_param_multinom <- list(list_models,model_type,y_var_name,data_df,unique_val_y_var,out_suffix_s,out_dir)
-  names(list_param_multinom) <- c("list_models","model_type","y_var_name","data_df","unique_val_y_var","out_suffix","out_dir")
-  
-  
-  model_obj <- mclapply(1:length(unique_val_y_var),FUN=run_multinom_mod_mc,list_param=list_param_multinom,
-           mc.preschedule=FALSE,mc.cores = num_cores)
-  #r_var_s <- mclapply(1:length(infile_var),FUN=import_list_modis_layers_fun,list_param=list_param_import_modis,mc.preschedule=FALSE,mc.cores = num_cores) #This is the end bracket from mclapply(...) statement
-  
-
-  return(model_obj)
-} 
-
 
 #mod_names <-  c("mod1a","mod2a","mod3a","mod4a","mod5a","mod6a","mod7a","mod8a")
 #df_mod <- data.frame(mod_names=mod_names,AIC=AIC_values)

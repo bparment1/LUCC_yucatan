@@ -173,19 +173,31 @@ if(run_relevel==TRUE){
 
 #Run for the overall state
 out_suffix_s <- paste("overall_",out_suffix,sep="")
+#debug(multinomial_model_fun)
+
 data_df_overall_model_obj <- multinomial_model_fun(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir)
+names_mod_obj <- file.path(out_dir,paste("data_df_overall_model_obj_",out_suffix_s,".RData",sep=""))
+save(data_df_overall_model_obj,file= names_mod_obj)
 
 unique_val_zones <- (unique(data_df_spdf[[zonal_var_name]]))
 unique_val_zones <- unique_val_zones[!is.na(unique_val_zones)]
 
 #> unique_val_zones
 #[1] "Yucatan"      "Quintana Roo" "Campeche"
+list_by_region_model_obj <- vector("list",length=length(unique_val_zones))
 for(i in 1:length(unique_val_zones)){
  
-  out_suffix_s <- paste(unique_val_zones[i],out_suffix,sep="")
+  val_zone <- paste(unlist(strsplit(unique_val_zones[i]," ")),collapse = "_") #e.g. state here
+  out_suffix_s <- paste(val_zone,out_suffix,sep="_")
   data_df_by_region_model_obj <- multinomial_model_fun(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir)
   
+  #names(list_mod) <- paste("val_zone_",unique_val_zones[i],sep="")
+  names_mod_obj <- file.path(out_dir,paste("data_df_by_region_model_obj_","val_zone_","_",out_suffix_s,".RData",sep=""))
+  save(data_df_by_region_model_obj,file= names_mod_obj)
+  list_by_region_model_obj[[i]] <- data_df_by_region_model_obj
+  names(list_by_region_model_obj[[i]]) <- val_zone
 }
+
 
 #mod_names <-  c("mod1a","mod2a","mod3a","mod4a","mod5a","mod6a","mod7a","mod8a")
 #df_mod <- data.frame(mod_names=mod_names,AIC=AIC_values)

@@ -155,6 +155,9 @@ hist(data_df[[y_var_name]])
 table(data_df[[y_var_name]])
 barplot(table(data_df[[y_var_name]]))
 
+
+#### Part II: run modeling ####
+
 #### Run modeling series A ###
 
 #run overall but also state by state
@@ -188,8 +191,9 @@ list_by_region_model_obj <- vector("list",length=length(unique_val_zones))
 for(i in 1:length(unique_val_zones)){
  
   val_zone <- paste(unlist(strsplit(unique_val_zones[i]," ")),collapse = "_") #e.g. state here
-  out_suffix_s <- paste(val_zone,out_suffix,sep="_")
-  data_df_by_region_model_obj <- multinomial_model_fun(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir)
+  out_suffix_s <- paste(val_zone,out_suffix,sep="_") #use data by state
+  data_subset <- subset(data_df_spdf,data_df_spdf$state==unique_val_zones[i])
+  data_df_by_region_model_obj <- multinomial_model_fun(list_models,model_type="multinom",y_var_name,data_df=data_subset,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir)
   
   #names(list_mod) <- paste("val_zone_",unique_val_zones[i],sep="")
   names_mod_obj <- file.path(out_dir,paste("data_df_by_region_model_obj_","val_zone_","_",out_suffix_s,".RData",sep=""))
@@ -198,6 +202,11 @@ for(i in 1:length(unique_val_zones)){
   names(list_by_region_model_obj[[i]]) <- val_zone
 }
 
+#### PART III: extract information from models ######
+
+list_model_obj <- list.files(out_dir,"*model_obj*",full.names=T)
+#Reading object files produced earlier:
+model_obj <- load_obj(list_model_obj[[1]])
 
 #mod_names <-  c("mod1a","mod2a","mod3a","mod4a","mod5a","mod6a","mod7a","mod8a")
 #df_mod <- data.frame(mod_names=mod_names,AIC=AIC_values)

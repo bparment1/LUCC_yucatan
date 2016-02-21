@@ -6,7 +6,7 @@
 #
 #AUTHOR: Benoit Parmentier, Marco Millones                                                                      #
 #DATE CREATED: 02/12/2016 
-#DATE MODIFIED: 02/14/2016
+#DATE MODIFIED: 02/20/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan, Marco Millones
 #   
@@ -103,8 +103,8 @@ run_multinom_mod_mc <- function(i,list_param){
   #                mc.preschedule=FALSE,mc.cores = num_cores)
   
   #debug(run_multinom_mod)
-  list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name=ref_var_name)
-  names(list_mod) <- paste("ref_",ref_var_name)
+  list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df,ref_var_name=ref_var_name)
+  names(list_mod) <- paste("ref_",ref_var_name,sep="")
   names_mod_obj <- file.path(".",paste("list_mod_","ref_",ref_var_name,"_",out_suffix_s,".RData",sep=""))
   save(list_mod,file= names_mod_obj)
   
@@ -141,8 +141,8 @@ multinomial_model_fun<-function(list_models,model_type="multinom",y_var_name,dat
   
   #unique_val_zones <- (unique(data_df_spdf[[zonal_var_name]]))
   #unique_val_zones <- unique_val_zones[!is.na(unique_val_zones)]
-  unique_val_y_var <- (unique(data_df_spdf[[y_var_name]]))
-  unique_val_y_var <- order(unique_val_zones[!is.na(unique_val_y_var)],decreasing = TRUE) #values 1,2,3
+  unique_val_y_var <- as.numeric(unique(data_df[[y_var_name]]))
+  unique_val_y_var <- sort(unique_val_y_var[!is.na(unique_val_y_var)]) #values 1,2,3
   
   #
   #
@@ -154,7 +154,8 @@ multinomial_model_fun<-function(list_models,model_type="multinom",y_var_name,dat
   list_param_multinom <- list(list_models,model_type,y_var_name,data_df,unique_val_y_var,out_suffix_s,out_dir)
   names(list_param_multinom) <- c("list_models","model_type","y_var_name","data_df","unique_val_y_var","out_suffix","out_dir")
   
-  
+  #debug(run_multinom_mod_mc)
+  #test<- run_multinom_mod_mc(1,list_param_multinom)
   model_obj <- mclapply(1:length(unique_val_y_var),FUN=run_multinom_mod_mc,list_param=list_param_multinom,
                         mc.preschedule=FALSE,mc.cores = num_cores)
   #r_var_s <- mclapply(1:length(infile_var),FUN=import_list_modis_layers_fun,list_param=list_param_import_modis,mc.preschedule=FALSE,mc.cores = num_cores) #This is the end bracket from mclapply(...) statement

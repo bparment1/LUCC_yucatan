@@ -40,7 +40,7 @@ library(parallel)                        # parralel programming and multi cores
 
 ###### Functions used in this script
 
-functions_analyses_script <- "analyses_fire_yucatan_functions_02202016.R" #PARAM 1
+functions_analyses_script <- "analyses_fire_yucatan_functions_02212016.R" #PARAM 1
 script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
 source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
 
@@ -57,7 +57,7 @@ CRS_reg <- CRS_WGS84 # PARAM 4
 file_format <- ".rst" #PARAM5
 NA_value <- -9999 #PARAM6
 NA_flag_val <- NA_value #PARAM7
-out_suffix <-"yucatan_CI_analyses_02202016" #output suffix for the files and ouptu folder #PARAM 8
+out_suffix <-"yucatan_CI_analyses_02212016" #output suffix for the files and ouptu folder #PARAM 8
 create_out_dir_param=TRUE #PARAM9
 state_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/IN_QGIS/State_dis_from_muni.shp"
 data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.xlsx" #contains the whole dataset
@@ -229,6 +229,10 @@ model_obj <- load_obj(list_model_obj[[1]])
 #2-tailed z test
 #p <- (1 - pnorm(abs(z), 0, 1))*2
 #p
+
+crosstab(data_df, row.vars = "Age", col.vars = "Sex", type = "f")
+test2<- xtabs(fpnfpch~ FIRE_bool,data_df)
+crosstab(data_df, row.vars = "FIRE_bool", col.vars = "fpnfpch", type = "f")
 
 ############### END OF SCRIPT ###################
 

@@ -6,7 +6,7 @@
 #
 #AUTHOR: Benoit Parmentier, Marco Millones                                                                      #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 02/20/2016
+#DATE MODIFIED: 02/21/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan, Marco Millones
 #   
@@ -63,6 +63,8 @@ state_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/IN_QGIS/State_dis_f
 data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.xlsx" #contains the whole dataset
 #data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/yucatan_fire.xlsx" #contains the whole dataset
 data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/yucatan_fire.csv" #contains the whole dataset
+
+#data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/old_data/000_GYR_FIRENDVI_2000-9.txt"
 #data_CI_02062016.txt
 coord_names <- c("POINT_X","POINT_Y") #PARAM 11
 zonal_var_name <- "state" #name of the variable to use to run the model by zone, Yucatan state here
@@ -115,16 +117,25 @@ if(create_out_dir_param==TRUE){
 #data_CI <-read.xls(data_CI_fname, sheet=1)
 #data_Hansen <-read.xls(data_Hansen_fname, sheet=1)
 
+#data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=" ")
 data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
+#ml$prog2 <- relevel(ml$prog, ref = "academic")
+data_df$category <- 1*data_df$FP+2*data_df$NFP+3*data_df$ch
+
+#test <- multinom(category ~ cy + FIRE, data = data_df)
+
+test <- multinom(fpnfpch ~ cy_r + FIRE_bool, data = data_df)
 
 #write.table(data_Hansen,file.path(in_dir,"data_Hansen_02062016.txt"),sep=",")
 #write.table(data_CI,file.path(in_dir,"data_CI_02062016.txt"),header=T,sep=",")
 
 #Create the count variable
 fire_modis_col <- c("FIRE_2000","FIRE_2001","FIRE_2002","FIRE_2003","FIRE_2004","FIRE_2005","FIRE_2006","FIRE_2007")
-data_df$FIRE_freq <- colSums(data_df[,fire_modis_col])
+#data_df$FIRE_freq <- colSums(data_df[,fire_modis_col])
+data_df$FIRE_freq <- data_df$FIRE_2000 + data_df$FIRE_2001 + data_df$FIRE_2002 + data_df$FIRE_2003 + data_df$FIRE_2004 + data_df$FIRE_2005 + data_df$FIRE_2006 + data_df$FIRE_2007 
 data_df$FIRE_intensity <- data_df$FIRE_freq/8
 data_df$FIRE_bool <- data_df$FIRE_freq > 0
+data_df$FIRE_bool <- as.numeric(data_df$FIRE_bool)
 
 data_df_spdf <- data_df
 coordinates(data_df_spdf) <- coord_names
@@ -227,12 +238,20 @@ model_obj <- load_obj(list_model_obj[[1]])
 #z
 
 #2-tailed z test
-#p <- (1 - pnorm(abs(z), 0, 1))*2
+p <- (1 - pnorm(abs(z), 0, 1))*2
 #p
 
 crosstab(data_df, row.vars = "Age", col.vars = "Sex", type = "f")
-test2<- xtabs(fpnfpch~ FIRE_bool,data_df)
+
+xtabs_tb <- xtabs(~fpnfpch+FIRE_bool,data_df)
+attach(data_df)
+mytable <- table(fpnfpch,FIRE_bool) # A will be rows, B will be columns 
+mytable # print table 
+
 crosstab(data_df, row.vars = "FIRE_bool", col.vars = "fpnfpch", type = "f")
+CrossTable(data_df$fpnfpch, data_df$FIRE_bool)
+
+data_df$FIRE_bool <- as.numeric(data_df$FIRE_bool)
 
 ############### END OF SCRIPT ###################
 

@@ -6,7 +6,7 @@
 #
 #AUTHOR: Benoit Parmentier, Marco Millones                                                                      #
 #DATE CREATED: 02/12/2016 
-#DATE MODIFIED: 02/20/2016
+#DATE MODIFIED: 02/22/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan, Marco Millones
 #   
@@ -70,10 +70,19 @@ run_multinom_mod <- function(list_models,model_type="multinom",y_var_name,data_d
 
   #formula_obj
   #run_multinom <- function(data_df,formula_obj){
+  list_mod <- vector("list",length=length(list_formulas))
   if(model_type=="multinom"){
-    list_mod <- lapply(1:length(list_formulas),
-                       FUN=function(i,list_formulas,data_df){multinom(list_formulas[[i]],data=data_df)},
-                       list_formulas=list_formulas,data_df=data_df)
+    #eval(list_formulas[[1]])
+    #list_mod <- lapply(1:length(list_formulas),
+    #                   FUN=function(i,list_formulas,data_df){formula_val <- list_formulas[[i]];multinom(formula_val,data=data_df)},
+    #                  list_formulas=list_formulas,data_df=data_df)
+    for(k in 1:length(list_formulas)){
+      #formula_val <- list_formulas[[k]]
+      formula_val <- list_models[[k]]
+      mod <- multinom(as.formula(formula_val),data=data_df)#work around to solve issue in model object
+      #mod <- multinom(y_var ~ cy_r, data=data_df)
+      list_mod[[k]] <- mod
+    }
     #mod <- multinom(formula_obj,data=data_df)
   }
   return(list_mod)
@@ -164,17 +173,45 @@ multinomial_model_fun<-function(list_models,model_type="multinom",y_var_name,dat
   return(model_obj)
 } 
 
-extraction_of_information <- function(list_mod){
+extract_coef_p_values <- function(mod){
   
-  #list_moda <- list(mod1a,mod2a,mod3a,mod4a,mod5a,mod6a,mod7a,mod8a)
-  #lapply(list_mod,function(x))
+  summary_mod <- summary(mod)
+  z <- summary_mod$coefficients/summary_mod$standard.errors
+  #2-tailed z test
+  p <- (1 - pnorm(abs(z), 0, 1))*2 #95% interval Wald
+  
+  summary_coefficients <- summary_mod$coefficients
+  summary_standard_errors <- summary_mod$standard.errors
+  
+  summary_obj <- list(p,z,summary_coefficients,summary_standard_errors)
+  names(summary_obj) <- c("p","z","summary_coefficients","summary_standard_errors")
+  return(summary_obj)
+}
+
+extract_multinom_mod_information <- function(mod){
+  #modify to use mclapply later!!!
+  
+  
+  ##### Start script ###
+  
+  if(class(mod)!="list"){
+    list_mod <- list(mod)
+  }else{
+    list_mod <- mod
+    rm(mod)
+  }
+  
   AIC_values <- unlist(lapply(list_mod,function(x){x$AIC}))
   list_coef <- lapply(list_mod,function(x){summary(x)$coefficients})
-  list_formulas <- lapply(list_mod,function(x){summary(x)$formula})
-  multinom_extract_obj <- list(AIC_values,list_coef,list_formulas)
-  names(multinom_extract_obj) <- c("AIC_values","list_coef","list_formulas")
+  #list_formulas <- lapply(list_mod,function(x){summary(x)$formula})
+  list_extract_coef_p_values <- lapply(list_mod,FUN=extract_coef_p_values)
+
+  multinom_extract_obj <- list(AIC_values,list_coef,list_extract_coef_p_values)
+  names(multinom_extract_obj) <- c("AIC_values","list_coef","list_extract_coef_p_values")
   return(multinom_extract_obj)
 }
+
+### Add function to reformat the tables here...
 
 
 ############### END OF SCRIPT ###################

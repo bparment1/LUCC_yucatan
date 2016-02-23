@@ -201,11 +201,13 @@ extract_multinom_mod_information <- function(mod){
     rm(mod)
   }
   
+  names_mod <- paste("mod",1:length(list_mod),sep="")
   AIC_values <- unlist(lapply(list_mod,function(x){x$AIC}))
+  names(AIC_values) <- names_mod
   list_coef <- lapply(list_mod,function(x){summary(x)$coefficients})
   #list_formulas <- lapply(list_mod,function(x){summary(x)$formula})
   list_extract_coef_p_values <- lapply(list_mod,FUN=extract_coef_p_values)
-
+  names(list_extract_coef_p_values) <-names_mod
   multinom_extract_obj <- list(AIC_values,list_coef,list_extract_coef_p_values)
   names(multinom_extract_obj) <- c("AIC_values","list_coef","list_extract_coef_p_values")
   return(multinom_extract_obj)

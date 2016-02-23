@@ -1,5 +1,5 @@
-################################    FIRE YUCATAN PAPER  #######################################
-############################      LAND COVER CHANGE          #######################################
+#################################    FIRE YUCATAN PAPER  #######################################
+#############################       LAND COVER CHANGE          #######################################
 #This script reads data extracted from MODIS FIRE time series                             
 #The goal is to show how fire can be used as proxy for land cover change in the region.      
 #This script implements a spatial logit model with explantory variables.                                                     #
@@ -73,23 +73,27 @@ ref_var_name <- ""
 run_relevel <- TRUE
 num_cores <- 3
 
-list_models<-c("y_var ~ cy_q",
-               "y_var ~ cy_q + FIRE_pre07",
-               "y_var ~ cy_q + FIRE_intensity",
-               "y_var ~ cy_q + FIRE_bool",
-               "y_var ~ cy_q +  
+list_models<-c("y_var ~ cy_r",
+               "y_var ~ cy_r + FIRE_pre07",
+               "y_var ~ cy_r + FIRE_intensity",
+               "y_var ~ cy_r + FIRE_bool",
+               "y_var ~ cy_r +  
                       dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
                       elevation + slope_deg + landcover + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil",
-               "y_var ~ cy_q + FIRE_pre07 + 
+               "y_var ~ cy_r + FIRE_bool +
                       dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
                       elevation + slope_deg + landcover + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil",
-               "y_var ~ cy_q + FIRE_intensity + 
+               "y_var ~ cy_r + FIRE_pre07 + 
                       dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
                       elevation + slope_deg + landcover + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil",
-               "y_var ~ cy_q + FIRE_freq + 
+               "y_var ~ cy_r + FIRE_intensity + 
+                      dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+                      elevation + slope_deg + landcover + cattledensity + ejido + 
+                      popdens_change + precip + protegidas + soil",
+               "y_var ~ cy_r + FIRE_freq + 
                       dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
                       elevation + slope_deg + landcover + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil"
@@ -124,7 +128,6 @@ data_df$category <- 1*data_df$FP+2*data_df$NFP+3*data_df$ch
 
 #test <- multinom(category ~ cy + FIRE, data = data_df)
 
-test <- multinom(fpnfpch ~ cy_r + FIRE_bool, data = data_df)
 
 #write.table(data_Hansen,file.path(in_dir,"data_Hansen_02062016.txt"),sep=",")
 #write.table(data_CI,file.path(in_dir,"data_CI_02062016.txt"),header=T,sep=",")
@@ -180,6 +183,23 @@ if(run_relevel==TRUE){
   data_df_spdf[[y_var_name]] <- as.factor(data_df_spdf[[y_var_name]])
 }
 
+
+test0 <- multinom(fpnfpch ~ cy_r + FIRE_bool, data = data_df)
+summary(test0)
+test <- multinom(fpnfpch ~ cy_r + FIRE_bool +
+                   dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+                   elevation + slope_deg + landcover + cattledensity + ejido + 
+                   popdens_change + precip + protegidas + soil, data=data_df)
+
+list_formulas<-lapply(list_models,as.formula,env=.GlobalEnv) #mulitple arguments passed to lapply!!
+data_df_spdf_tmp <- data_df_spdf
+data_df_spdf_tmp$y_var <- data_df_spdf_tmp[[y_var_name]]
+test3 <- multinom(list_formulas[[3]], data= data_df_spdf_tmp)
+summary(test3)
+
+#library(AER)
+#coeftest(test)
+#z <- summary(test3)$coefficients/summary(test3)$standard.errors
 #lapply() loop through unique val zones later!!
 #subset(data_df, state=="")
 #ref_var_name <- 1
@@ -192,6 +212,8 @@ out_suffix_s <- paste("overall_",out_suffix,sep="")
 data_df_overall_model_obj <- multinomial_model_fun(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir)
 names_mod_obj <- file.path(out_dir,paste("data_df_overall_model_obj_",out_suffix_s,".RData",sep=""))
 save(data_df_overall_model_obj,file= names_mod_obj)
+test4<-(data_df_overall_model_obj[[1]][[1]])
+z <- summary(test4)$coefficients/summary(test4)$standard.errors
 
 unique_val_zones <- (unique(data_df_spdf[[zonal_var_name]]))
 unique_val_zones <- unique_val_zones[!is.na(unique_val_zones)]

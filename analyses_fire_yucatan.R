@@ -37,10 +37,11 @@ library(ggplot2)                         # plotting package
 library(reshape2)                        # data wrangling
 library(mlogit)                          # maximum liklihood estimation and multinomial model
 library(parallel)                        # parralel programming and multi cores
+library(plyr)
 
 ###### Functions used in this script
 
-functions_analyses_script <- "analyses_fire_yucatan_functions_02222016.R" #PARAM 1
+functions_analyses_script <- "analyses_fire_yucatan_functions_02232016.R" #PARAM 1
 script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
 source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
 
@@ -127,10 +128,9 @@ if(create_out_dir_param==TRUE){
 data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
 data_Hansen <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
 #ml$prog2 <- relevel(ml$prog, ref = "academic")
-data_df$category <- 1*data_df$FP+2*data_df$NFP+3*data_df$ch
+#data_df$category <- 1*data_df$FP+2*data_df$NFP+3*data_df$ch
 
 #test <- multinom(category ~ cy + FIRE, data = data_df)
-
 
 #write.table(data_Hansen,file.path(in_dir,"data_Hansen_02062016.txt"),sep=",")
 #write.table(data_CI,file.path(in_dir,"data_CI_02062016.txt"),header=T,sep=",")
@@ -223,24 +223,25 @@ for(i in 1:length(unique_val_zones)){
 list_model_obj_fname <- list.files(out_dir,"*model_obj*",full.names=T)
 
 #debug(extract_multinom_mod_information)  
-list_extrat_mod <- vector("list",length=length(list_model_obj_fname))
+list_extract_mod <- vector("list",length=length(list_model_obj_fname))
 for(i in 1:length(list_model_obj_fname)){
   #Reading object files produced earlier:
   model_obj <- load_obj(list_model_obj_fname[[i]]) #ref 1 for overall model?
+  #undebug(extract_multinom_mod_information)
   list_extract_mod[[i]] <- lapply(model_obj,FUN=extract_multinom_mod_information)
 }
 list_extract_mod_fname <- paste("list_extract_mod_",out_suffix_s,".RData",sep="")
-save(list_extrat_mod,file=list_extract_mod_fname)
+save(list_extract_mod,file=list_extract_mod_fname)
 #test <- extract_multinom_mod_information(model_obj[[1]])#ref 1
   
-names(list_extrat_mod[[1]][[1]])
+names(list_extract_mod[[1]][[1]])
 #> names(list_extrat_mod[[1]][[1]])
 #[1] "AIC_values"                 "list_coef"                  "list_extract_coef_p_values"
 
-list_extract_mod <- list_extrat_mod
+#list_extract_mod <- list_extrat_mod
 
-list_extrat_mod[[4]][[1]]$AIC_values
-list_extrat_mod[[4]][[1]]$list_extract_coef_p_values
+list_extract_mod[[4]][[1]]$AIC_values
+list_extract_mod[[4]][[1]]$list_extract_coef_p_values
 
 ref_var <- c(1,2,3)
 list_df_AIC <- vector("list",length=3)
@@ -254,6 +255,24 @@ for(k in 1:3){
 }
 
 test<-do.call(rbind,list_df_AIC)
+
+names(list_extract_mod) <- c("Campeche","Quintana_Roo","Yucatan","overall") 
+list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod1$p
+list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2$p
+
+list_df_tmp <- vector("list",length=9)
+for(i in 1:length(list_models)){
+  extract_mod <- list_extract_mod[[4]][[1]]$list_extract_coef_p_values
+  region_name <- names(list_extract_mod)[4]
+  df_tmp <- as.data.frame((list_extract_mod[[4]][[1]]$list_extract_coef_p_values[[i]]$p))
+  df_tmp$ref_eqt <- rownames(df_tmp)
+  df_tmp$ref_var <- 1
+  df_tmp$mod_name <- paste("mod",i,sep="")
+  df_tmp$region <- region_name
+  list_df_tmp[[i]] <- df_tmp
+}
+test_df <- do.call(rbind.fill,list_df_tmp)
+
 
 ##Note that multinom does not calculate p-values but we can carry out a Wald test...
 

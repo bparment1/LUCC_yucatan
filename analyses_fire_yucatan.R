@@ -6,7 +6,7 @@
 #
 #AUTHOR: Benoit Parmentier, Marco Millones                                                                      #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 02/21/2016
+#DATE MODIFIED: 02/22/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan, Marco Millones
 #   
@@ -40,7 +40,7 @@ library(parallel)                        # parralel programming and multi cores
 
 ###### Functions used in this script
 
-functions_analyses_script <- "analyses_fire_yucatan_functions_02212016.R" #PARAM 1
+functions_analyses_script <- "analyses_fire_yucatan_functions_02222016.R" #PARAM 1
 script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
 source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
 
@@ -57,10 +57,12 @@ CRS_reg <- CRS_WGS84 # PARAM 4
 file_format <- ".rst" #PARAM5
 NA_value <- -9999 #PARAM6
 NA_flag_val <- NA_value #PARAM7
-out_suffix <-"yucatan_CI_analyses_02212016" #output suffix for the files and ouptu folder #PARAM 8
+out_suffix <-"yucatan_CI_analyses_02222016" #output suffix for the files and ouptu folder #PARAM 8
 create_out_dir_param=TRUE #PARAM9
 state_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/IN_QGIS/State_dis_from_muni.shp"
-data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.xlsx" #contains the whole dataset
+#data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.xlsx" #contains the whole dataset
+data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.csv" #contains the whole dataset
+
 #data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/yucatan_fire.xlsx" #contains the whole dataset
 data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/yucatan_fire.csv" #contains the whole dataset
 
@@ -123,6 +125,7 @@ if(create_out_dir_param==TRUE){
 
 #data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=" ")
 data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
+data_Hansen <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
 #ml$prog2 <- relevel(ml$prog, ref = "academic")
 data_df$category <- 1*data_df$FP+2*data_df$NFP+3*data_df$ch
 
@@ -174,7 +177,7 @@ barplot(table(data_df[[y_var_name]]))
 
 #### Run modeling series A ###
 
-#run overall but also state by state
+#run overall for the whole Yucatan peninsula
 
 #make this a function?
 
@@ -183,28 +186,6 @@ if(run_relevel==TRUE){
   data_df_spdf[[y_var_name]] <- as.factor(data_df_spdf[[y_var_name]])
 }
 
-
-test0 <- multinom(fpnfpch ~ cy_r + FIRE_bool, data = data_df)
-summary(test0)
-test <- multinom(fpnfpch ~ cy_r + FIRE_bool +
-                   dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
-                   elevation + slope_deg + landcover + cattledensity + ejido + 
-                   popdens_change + precip + protegidas + soil, data=data_df)
-
-list_formulas<-lapply(list_models,as.formula,env=.GlobalEnv) #mulitple arguments passed to lapply!!
-data_df_spdf_tmp <- data_df_spdf
-data_df_spdf_tmp$y_var <- data_df_spdf_tmp[[y_var_name]]
-test3 <- multinom(list_formulas[[3]], data= data_df_spdf_tmp)
-summary(test3)
-
-#library(AER)
-#coeftest(test)
-#z <- summary(test3)$coefficients/summary(test3)$standard.errors
-#lapply() loop through unique val zones later!!
-#subset(data_df, state=="")
-#ref_var_name <- 1
-#debug(multinomial_model_fun)
-
 #Run for the overall state
 out_suffix_s <- paste("overall_",out_suffix,sep="")
 #debug(multinomial_model_fun)
@@ -212,8 +193,10 @@ out_suffix_s <- paste("overall_",out_suffix,sep="")
 data_df_overall_model_obj <- multinomial_model_fun(list_models,model_type="multinom",y_var_name,data_df=data_df_spdf,ref_var_name,zonal_var_name,num_cores,out_suffix_s,out_dir)
 names_mod_obj <- file.path(out_dir,paste("data_df_overall_model_obj_",out_suffix_s,".RData",sep=""))
 save(data_df_overall_model_obj,file= names_mod_obj)
-test4<-(data_df_overall_model_obj[[1]][[1]])
-z <- summary(test4)$coefficients/summary(test4)$standard.errors
+
+#### Run modeling series A ###
+
+#run state by state
 
 unique_val_zones <- (unique(data_df_spdf[[zonal_var_name]]))
 unique_val_zones <- unique_val_zones[!is.na(unique_val_zones)]
@@ -237,17 +220,62 @@ for(i in 1:length(unique_val_zones)){
 
 #### PART III: extract information from models ######
 
-list_model_obj <- list.files(out_dir,"*model_obj*",full.names=T)
-#Reading object files produced earlier:
-model_obj <- load_obj(list_model_obj[[1]])
+list_model_obj_fname <- list.files(out_dir,"*model_obj*",full.names=T)
 
-#mod_names <-  c("mod1a","mod2a","mod3a","mod4a","mod5a","mod6a","mod7a","mod8a")
-#df_mod <- data.frame(mod_names=mod_names,AIC=AIC_values)
-#barplot(df_mod$AIC,names="mod_names",names.arg=mod_names)
-#debug(extraction_of_information)
-#test <- extraction_of_information(list_mod)
+#debug(extract_multinom_mod_information)  
+list_extrat_mod <- vector("list",length=length(list_model_obj_fname))
+for(i in 1:length(list_model_obj_fname)){
+  #Reading object files produced earlier:
+  model_obj <- load_obj(list_model_obj_fname[[i]]) #ref 1 for overall model?
+  list_extract_mod[[i]] <- lapply(model_obj,FUN=extract_multinom_mod_information)
+}
+list_extract_mod_fname <- paste("list_extract_mod_",out_suffix_s,".RData",sep="")
+save(list_extrat_mod,file=list_extract_mod_fname)
+#test <- extract_multinom_mod_information(model_obj[[1]])#ref 1
   
+names(list_extrat_mod[[1]][[1]])
+#> names(list_extrat_mod[[1]][[1]])
+#[1] "AIC_values"                 "list_coef"                  "list_extract_coef_p_values"
+
+list_extract_mod <- list_extrat_mod
+
+list_extrat_mod[[4]][[1]]$AIC_values
+list_extrat_mod[[4]][[1]]$list_extract_coef_p_values
+
+ref_var <- c(1,2,3)
+list_df_AIC <- vector("list",length=3)
+
+for(k in 1:3){
+  df <- as.data.frame(list_extract_mod[[4]][[k]]$AIC_values)
+  names(df) <- "AIC"
+  df$ref_var <- k
+  df$mod_name <- paste("mod",1:nrow(df))
+  list_df_AIC[[k]] <- df
+}
+
+test<-do.call(rbind,list_df_AIC)
+
 ##Note that multinom does not calculate p-values but we can carry out a Wald test...
+
+
+##### PART IV: Get general information about the data ######
+
+xtabs_tb <- xtabs(~fpnfpch+FIRE_bool,data_df)
+attach(data_df)
+mytable <- table(fpnfpch,FIRE_bool) # A will be rows, B will be columns 
+mytable # print table 
+
+crosstab(data_df, row.vars = "FIRE_bool", col.vars = "fpnfpch", type = "f")
+CrossTable(data_df$fpnfpch, data_df$FIRE_bool)
+
+data_df$FIRE_bool <- as.numeric(data_df$FIRE_bool)
+
+
+############### END OF SCRIPT ###################
+
+#http://www.r-bloggers.com/r-code-example-for-neural-networks/
+#http://www.ats.ucla.edu/stat/r/dae/mlogit.htm
+#http://data.princeton.edu/wws509/r/c6s2.html
 
 #> mod2a$coefnames
 #[1] "(Intercept)" "cy_q"        "FIRE_pre07" 
@@ -260,24 +288,5 @@ model_obj <- load_obj(list_model_obj[[1]])
 #z
 
 #2-tailed z test
-p <- (1 - pnorm(abs(z), 0, 1))*2
+#p <- (1 - pnorm(abs(z), 0, 1))*2
 #p
-
-crosstab(data_df, row.vars = "Age", col.vars = "Sex", type = "f")
-
-xtabs_tb <- xtabs(~fpnfpch+FIRE_bool,data_df)
-attach(data_df)
-mytable <- table(fpnfpch,FIRE_bool) # A will be rows, B will be columns 
-mytable # print table 
-
-crosstab(data_df, row.vars = "FIRE_bool", col.vars = "fpnfpch", type = "f")
-CrossTable(data_df$fpnfpch, data_df$FIRE_bool)
-
-data_df$FIRE_bool <- as.numeric(data_df$FIRE_bool)
-
-############### END OF SCRIPT ###################
-
-#http://www.r-bloggers.com/r-code-example-for-neural-networks/
-#http://www.ats.ucla.edu/stat/r/dae/mlogit.htm
-#http://data.princeton.edu/wws509/r/c6s2.html
-

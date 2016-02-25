@@ -214,6 +214,32 @@ extract_multinom_mod_information <- function(mod){
 }
 
 ### Add function to reformat the tables here...
+produce_regression_parameter_table <- function(reg_param,extract_mod,ref_var_tmp,list_models,region_name){
+  #This function reorganizes parameters extracted from multinom.
+  #Parameters are, p, z, coefficients and standard errors.
+  #Inputs:
+  #1)reg_param <- regression parameters, p, z, coeff, stand errors 
+  #2)extract_mod <- extact object from function extract
+  #3)ref_var_tmp: value for the reference variable, in this context 1,2,3
+  #4)list_models: model formulas as string/char
+  #5)region_name: overall, Campeche, Yucatan, Quintana Roo
+  #
+  
+  list_df_tmp <- vector("list",length=length(list_models))
+  #loop through models...
+  for(i in 1:length(list_models)){
+    df_tmp <- as.data.frame((extract_mod[[i]][[reg_param]])) #e.g. p variable
+    df_tmp$ref_eqt <- rownames(df_tmp)
+    df_tmp$ref_var <- ref_var_tmp
+    df_tmp$mod_name <- paste("mod",i,sep="")
+    df_tmp$region <- region_name
+    list_df_tmp[[i]] <- df_tmp
+  }
+  
+  test_df <- do.call(rbind.fill,list_df_tmp)
+  
+  return(test_df)
+}
 
 
 ############### END OF SCRIPT ###################

@@ -247,9 +247,13 @@ ref_var <- c(1,2,3)
 list_df_AIC <- vector("list",length=3)
 
 for(k in 1:3){
-  df <- as.data.frame(list_extract_mod[[4]][[k]]$AIC_values)
+
+  extract_mod <- list_extract_mod[[4]][[1]]
+  df <- as.data.frame(extract_mod[[k]]$AIC_values)
+  region_name <- names(list_extract_mod)[4]
   names(df) <- "AIC"
   df$ref_var <- k
+  df$
   df$mod_name <- paste("mod",1:nrow(df))
   list_df_AIC[[k]] <- df
 }
@@ -259,19 +263,57 @@ test<-do.call(rbind,list_df_AIC)
 names(list_extract_mod) <- c("Campeche","Quintana_Roo","Yucatan","overall") 
 list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod1$p
 list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2$p
+list_tables_reg_param <- names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
 
-list_df_tmp <- vector("list",length=9)
-for(i in 1:length(list_models)){
-  extract_mod <- list_extract_mod[[4]][[1]]$list_extract_coef_p_values
-  region_name <- names(list_extract_mod)[4]
-  df_tmp <- as.data.frame((list_extract_mod[[4]][[1]]$list_extract_coef_p_values[[i]]$p))
-  df_tmp$ref_eqt <- rownames(df_tmp)
-  df_tmp$ref_var <- 1
-  df_tmp$mod_name <- paste("mod",i,sep="")
-  df_tmp$region <- region_name
-  list_df_tmp[[i]] <- df_tmp
+
+#> names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
+#[1] "p"                       "z"                       "summary_coefficients"    "summary_standard_errors"
+
+#Makes this a function
+
+#function(list_extract_mod)
+for(i in 1:length(list_extract_mod)){
+  reg_param <- list_tables_reg_param[1] #start with p value first
+  list_models
+  region_name <- names(list_extract_mod)[i]
+  
+  #extract_mod <- list_extract_mod[[4]][[1]]$list_extract_coef_p_values
+  for(k in 1:3){
+    extract_mod <- list_extract_mod[[i]][[k]]$list_extract_coef_p_values
+    ref_var_tmp <- k
+    #debug(produce_regression_parameter_table)
+    test_df_tmp <- produce_regression_parameter_table(reg_param,extract_mod,ref_var_tmp,list_models,region_name)
+  }
 }
-test_df <- do.call(rbind.fill,list_df_tmp)
+
+
+
+produce_regression_parameter_table <- function(reg_param,extract_mod,ref_var_tmp,list_models,region_name){
+  #This function reorganizes parameters extracted from multinom.
+  #Parameters are, p, z, coefficients and standard errors.
+  #Inputs:
+  #1)reg_param <- regression parameters, p, z, coeff, stand errors 
+  #2)extract_mod <- extact object from function extract
+  #3)ref_var_tmp: value for the reference variable, in this context 1,2,3
+  #4)list_models: model formulas as string/char
+  #5)region_name: overall, Campeche, Yucatan, Quintana Roo
+  #
+  
+  list_df_tmp <- vector("list",length=length(list_models))
+  #loop through models...
+  for(i in 1:length(list_models)){
+    df_tmp <- as.data.frame((extract_mod[[i]][[reg_param]])) #e.g. p variable
+    df_tmp$ref_eqt <- rownames(df_tmp)
+    df_tmp$ref_var <- ref_var_tmp
+    df_tmp$mod_name <- paste("mod",i,sep="")
+    df_tmp$region <- region_name
+    list_df_tmp[[i]] <- df_tmp
+  }
+  
+  test_df <- do.call(rbind.fill,list_df_tmp)
+  
+  return(test_df)
+}
 
 
 ##Note that multinom does not calculate p-values but we can carry out a Wald test...

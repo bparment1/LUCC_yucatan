@@ -126,18 +126,12 @@ if(create_out_dir_param==TRUE){
 
 #data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=" ")
 data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
-data_Hansen <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
-#ml$prog2 <- relevel(ml$prog, ref = "academic")
+#data_Hansen <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
+#data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
 #data_df$category <- 1*data_df$FP+2*data_df$NFP+3*data_df$ch
-
-#test <- multinom(category ~ cy + FIRE, data = data_df)
-
-#write.table(data_Hansen,file.path(in_dir,"data_Hansen_02062016.txt"),sep=",")
-#write.table(data_CI,file.path(in_dir,"data_CI_02062016.txt"),header=T,sep=",")
 
 #Create the count variable
 fire_modis_col <- c("FIRE_2000","FIRE_2001","FIRE_2002","FIRE_2003","FIRE_2004","FIRE_2005","FIRE_2006","FIRE_2007")
-#data_df$FIRE_freq <- colSums(data_df[,fire_modis_col])
 data_df$FIRE_freq <- data_df$FIRE_2000 + data_df$FIRE_2001 + data_df$FIRE_2002 + data_df$FIRE_2003 + data_df$FIRE_2004 + data_df$FIRE_2005 + data_df$FIRE_2006 + data_df$FIRE_2007 
 data_df$FIRE_intensity <- data_df$FIRE_freq/8
 data_df$FIRE_bool <- data_df$FIRE_freq > 0
@@ -172,7 +166,6 @@ hist(data_df[[y_var_name]])
 table(data_df[[y_var_name]])
 barplot(table(data_df[[y_var_name]]))
 
-
 #### Part II: run modeling ####
 
 #### Run modeling series A ###
@@ -197,7 +190,6 @@ save(data_df_overall_model_obj,file= names_mod_obj)
 #### Run modeling series A ###
 
 #run state by state
-
 unique_val_zones <- (unique(data_df_spdf[[zonal_var_name]]))
 unique_val_zones <- unique_val_zones[!is.na(unique_val_zones)]
 
@@ -221,7 +213,6 @@ for(i in 1:length(unique_val_zones)){
 #### PART III: extract information from models ######
 
 list_model_obj_fname <- list.files(out_dir,"*model_obj*",full.names=T)
-
 #debug(extract_multinom_mod_information)  
 list_extract_mod <- vector("list",length=length(list_model_obj_fname))
 for(i in 1:length(list_model_obj_fname)){
@@ -242,29 +233,12 @@ names(list_extract_mod[[1]][[1]])
 
 list_extract_mod[[4]][[1]]$AIC_values
 list_extract_mod[[4]][[1]]$list_extract_coef_p_values
-
 ref_var <- c(1,2,3)
-list_df_AIC <- vector("list",length=3)
-
-for(k in 1:3){
-
-  extract_mod <- list_extract_mod[[4]][[1]]
-  df <- as.data.frame(extract_mod[[k]]$AIC_values)
-  region_name <- names(list_extract_mod)[4]
-  names(df) <- "AIC"
-  df$ref_var <- k
-  df$
-  df$mod_name <- paste("mod",1:nrow(df))
-  list_df_AIC[[k]] <- df
-}
-
-test<-do.call(rbind,list_df_AIC)
 
 names(list_extract_mod) <- c("Campeche","Quintana_Roo","Yucatan","overall") 
 list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod1$p
 list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2$p
 list_tables_reg_param <- names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
-
 
 #> names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
 #[1] "p"                       "z"                       "summary_coefficients"    "summary_standard_errors"
@@ -279,69 +253,37 @@ tb_summary_coef <- create_summary_tables_reg_multinom(list_extract_mod,reg_param
 reg_param<- "summary_standard_errors"
 tb_summary_std_errors <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
 
-create_summary_tables_reg_multinom <- function(list_extract_mod,reg_param,ref_var,list_region_name,list_models){
-  #
-  #Inputs:
-  #list_extract_mod
-  #reg_param,
-  #ref_var
-  #list_region_name
-  #list_models
+##Collapse tables for each region
+
+tb_summary_p_Campeche <- do.call(rbind,tb_summary_p[[1]])
+tb_summary_p_Quintana_Roo <- do.call(rbind,tb_summary_p[[2]])
+tb_summary_p_Yucatan <- do.call(rbind,tb_summary_p[[3]])
+tb_summary_p_overall <- do.call(rbind,tb_summary_p[[4]])
+
+#repeat this for every table and regression param , add to function above!!!
+
+write.table(tb_summary_p_Campeche,file=paste("tb_summary_p_Campeche_",out_suffix,sep="_"))
+write.table(tb_summary_p_Quintana_Roo,file=paste("tb_summary_p_Quintana_Roo_",out_suffix,sep="_"))
+write.table(tb_summary_p_Yucatan,file=paste("tb_summary_p_Yucatan_",out_suffix,sep="_"))
+write.table(tb_summary_p_overall,file=paste("tb_summary_p_overall_",out_suffix,sep="_"))
+
+### Now get AIC and log likelihood
+
+list_df_AIC <- vector("list",length=3)
+
+for(k in 1:3){
   
-  list_df_table_mod <- vector("list",length(list_extract_mod))
-  for(i in 1:length(list_extract_mod)){
-    #reg_param <- list_tables_reg_param[1] #start with p value first
-    #list_models
-    #region_name <- names(list_extract_mod)[i]
-    region_name <- list_region_name[i]
-    list_df_table_ref <- vector("list",length(ref_var))
-    #extract_mod <- list_extract_mod[[4]][[1]]$list_extract_coef_p_values
-    for(k in 1:length(ref_var)){
-      extract_mod <- list_extract_mod[[i]][[k]]$list_extract_coef_p_values
-      ref_var_tmp <- k
-      #debug(produce_regression_parameter_table)
-      test_df_tmp <- produce_regression_parameter_table(reg_param,extract_mod,ref_var_tmp,list_models,region_name)
-      list_df_table_ref[[k]] <- test_df_tmp
-    }
-    names(list_df_table_ref) <- as.character(ref_var_tmp)
-    list_df_table_mod[[i]]<-list_df_table_ref
-  }
-  names(list_df_table_mod) <- list_region_name
-  return(list_df_table_mod)
+  extract_mod <- list_extract_mod[[4]][[1]]
+  df <- as.data.frame(extract_mod[[k]]$AIC_values)
+  region_name <- names(list_extract_mod)[4]
+  names(df) <- "AIC"
+  df$ref_var <- k
+  df$
+    df$mod_name <- paste("mod",1:nrow(df))
+  list_df_AIC[[k]] <- df
 }
 
-
-
-
-produce_regression_parameter_table <- function(reg_param,extract_mod,ref_var_tmp,list_models,region_name){
-  #This function reorganizes parameters extracted from multinom.
-  #Parameters are, p, z, coefficients and standard errors.
-  #Inputs:
-  #1)reg_param <- regression parameters, p, z, coeff, stand errors 
-  #2)extract_mod <- extact object from function extract
-  #3)ref_var_tmp: value for the reference variable, in this context 1,2,3
-  #4)list_models: model formulas as string/char
-  #5)region_name: overall, Campeche, Yucatan, Quintana Roo
-  #
-  
-  list_df_tmp <- vector("list",length=length(list_models))
-  #loop through models...
-  for(i in 1:length(list_models)){
-    df_tmp <- as.data.frame((extract_mod[[i]][[reg_param]])) #e.g. p variable
-    df_tmp$ref_eqt <- rownames(df_tmp)
-    df_tmp$ref_var <- ref_var_tmp
-    df_tmp$mod_name <- paste("mod",i,sep="")
-    df_tmp$region <- region_name
-    list_df_tmp[[i]] <- df_tmp
-  }
-  
-  test_df <- do.call(rbind.fill,list_df_tmp)
-  
-  return(test_df)
-}
-
-
-##Note that multinom does not calculate p-values but we can carry out a Wald test...
+test<-do.call(rbind,list_df_AIC)
 
 
 ##### PART IV: Get general information about the data ######

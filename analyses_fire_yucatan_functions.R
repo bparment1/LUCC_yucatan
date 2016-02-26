@@ -6,7 +6,7 @@
 #
 #AUTHOR: Benoit Parmentier, Marco Millones                                                                      #
 #DATE CREATED: 02/12/2016 
-#DATE MODIFIED: 02/22/2016
+#DATE MODIFIED: 02/24/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan, Marco Millones
 #   
@@ -214,6 +214,38 @@ extract_multinom_mod_information <- function(mod){
 }
 
 ### Add function to reformat the tables here...
+
+create_summary_tables_reg_multinom <- function(list_extract_mod,reg_param,ref_var,list_region_name,list_models){
+  #
+  #Inputs:
+  #list_extract_mod
+  #reg_param,
+  #ref_var
+  #list_region_name
+  #list_models
+  
+  list_df_table_mod <- vector("list",length(list_extract_mod))
+  for(i in 1:length(list_extract_mod)){
+    #reg_param <- list_tables_reg_param[1] #start with p value first
+    #list_models
+    #region_name <- names(list_extract_mod)[i]
+    region_name <- list_region_name[i]
+    list_df_table_ref <- vector("list",length(ref_var))
+    #extract_mod <- list_extract_mod[[4]][[1]]$list_extract_coef_p_values
+    for(k in 1:length(ref_var)){
+      extract_mod <- list_extract_mod[[i]][[k]]$list_extract_coef_p_values
+      ref_var_tmp <- k
+      #debug(produce_regression_parameter_table)
+      test_df_tmp <- produce_regression_parameter_table(reg_param,extract_mod,ref_var_tmp,list_models,region_name)
+      list_df_table_ref[[k]] <- test_df_tmp
+    }
+    names(list_df_table_ref) <- as.character(ref_var_tmp)
+    list_df_table_mod[[i]]<-list_df_table_ref
+  }
+  names(list_df_table_mod) <- list_region_name
+  return(list_df_table_mod)
+}
+
 produce_regression_parameter_table <- function(reg_param,extract_mod,ref_var_tmp,list_models,region_name){
   #This function reorganizes parameters extracted from multinom.
   #Parameters are, p, z, coefficients and standard errors.

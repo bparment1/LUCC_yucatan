@@ -1,14 +1,15 @@
 #################################    FIRE YUCATAN PAPER  #######################################
-#############################       LAND COVER CHANGE          #######################################
+#############################         LAND COVER CHANGE          #######################################
 #This script reads data extracted from MODIS FIRE time series                             
 #The goal is to show how fire can be used as proxy for land cover change in the region.      
 #This script implements a spatial logit model with explantory variables.                                                     #
 #
-#AUTHOR: Benoit Parmentier, Marco Millones                                                                      #
+#
+#AUTHOR: Benoit Parmentier                                                                #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 02/22/2016
+#DATE MODIFIED: 03/23/2016
 #Version: 1
-#PROJECT: Land cover Change Yucatan, Marco Millones
+#PROJECT: Land cover Change Yucatan with Marco Millones as lead
 #   
 #COMMENTS:  Separation between function script and main script
 #TODO:
@@ -41,7 +42,7 @@ library(plyr)
 
 ###### Functions used in this script
 
-functions_analyses_script <- "analyses_fire_yucatan_functions_02232016.R" #PARAM 1
+functions_analyses_script <- "analyses_fire_yucatan_functions_03232016.R" #PARAM 1
 script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
 source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
 
@@ -58,7 +59,7 @@ CRS_reg <- CRS_WGS84 # PARAM 4
 file_format <- ".rst" #PARAM5
 NA_value <- -9999 #PARAM6
 NA_flag_val <- NA_value #PARAM7
-out_suffix <-"yucatan_CI_analyses_02222016" #output suffix for the files and ouptu folder #PARAM 8
+out_suffix <-"yucatan_CI_analyses_03232016" #output suffix for the files and ouptu folder #PARAM 8
 create_out_dir_param=TRUE #PARAM9
 state_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/IN_QGIS/State_dis_from_muni.shp"
 #data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.xlsx" #contains the whole dataset
@@ -143,8 +144,8 @@ filename<-sub(extension(basename(state_fname)),"",basename(state_fname))       #
 state_outline <- readOGR(dsn=dirname(state_fname), filename)
 
 proj4string(data_df_spdf) <- proj4string(state_outline)
-l_poly <- over(data_df_spdf,state_outline)
-data_df_spdf <- cbind(data_df_spdf,l_poly)
+l_poly <- over(data_df_spdf,state_outline) #points in polygon operation
+data_df_spdf <- cbind(data_df_spdf,l_poly) #join back the data
 coordinates(data_df_spdf) <- coord_names
 #unique(data_df_spdf$FIRST_NOM_)
 data_df_spdf$state <- as.character(data_df_spdf$FIRST_NOM_)
@@ -212,64 +213,111 @@ for(i in 1:length(unique_val_zones)){
 
 #### PART III: extract information from models ######
 
-list_model_obj_fname <- list.files(out_dir,"*model_obj*",full.names=T)
+#test<-load_obj("data_df_by_region_model_obj_val_zone__Campeche_yucatan_CI_analyses_03232016.RData")
+
+list_model_objects <- list.files(out_dir,"*model_obj*",full.names=T)
 #debug(extract_multinom_mod_information)  
-list_extract_mod <- vector("list",length=length(list_model_obj_fname))
-for(i in 1:length(list_model_obj_fname)){
-  #Reading object files produced earlier:
-  model_obj <- load_obj(list_model_obj_fname[[i]]) #ref 1 for overall model?
-  #undebug(extract_multinom_mod_information)
-  list_extract_mod[[i]] <- lapply(model_obj,FUN=extract_multinom_mod_information)
-}
-list_extract_mod_fname <- paste("list_extract_mod_",out_suffix_s,".RData",sep="")
-save(list_extract_mod,file=list_extract_mod_fname)
-#test <- extract_multinom_mod_information(model_obj[[1]])#ref 1
-  
-names(list_extract_mod[[1]][[1]])
-#> names(list_extrat_mod[[1]][[1]])
-#[1] "AIC_values"                 "list_coef"                  "list_extract_coef_p_values"
-
-#list_extract_mod <- list_extrat_mod
-
-list_extract_mod[[4]][[1]]$AIC_values
-list_extract_mod[[4]][[1]]$list_extract_coef_p_values
 ref_var <- c(1,2,3)
-
-names(list_extract_mod) <- c("Campeche","Quintana_Roo","Yucatan","overall") 
-list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod1$p
-list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2$p
-list_tables_reg_param <- names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
-
-#> names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
-#[1] "p"                       "z"                       "summary_coefficients"    "summary_standard_errors"
-
 list_region_name <- c("Campeche","Quintana_Roo","Yucatan","overall")
+region_name <- list_region_name
 
-#debug(create_summary_tables_reg_multinom)
-reg_param<- "p"
-tb_summary_p <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
-reg_param<- "summary_coefficients"
-tb_summary_coef <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
-reg_param<- "summary_standard_errors"
-tb_summary_std_errors <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
+### Make this part a function:
+debug(generate_summary_tables_from_models)
+test<- generate_summary_tables_from_models(list_models_objects,ref_var,region_name)
 
-##Collapse tables for each region
+generate_summary_tables_from_models <- function(list_models_objects,ref_var,region_name){
+  #
+  #
+  #
+  
+  ## Start ##
 
-tb_summary_p_Campeche <- do.call(rbind,tb_summary_p[[1]])
-tb_summary_p_Quintana_Roo <- do.call(rbind,tb_summary_p[[2]])
-tb_summary_p_Yucatan <- do.call(rbind,tb_summary_p[[3]])
-tb_summary_p_overall <- do.call(rbind,tb_summary_p[[4]])
-
-#repeat this for every table and regression param , add to function above!!!
-
-write.table(tb_summary_p_Campeche,file=paste("tb_summary_p_Campeche_",out_suffix,sep="_"))
-write.table(tb_summary_p_Quintana_Roo,file=paste("tb_summary_p_Quintana_Roo_",out_suffix,sep="_"))
-write.table(tb_summary_p_Yucatan,file=paste("tb_summary_p_Yucatan_",out_suffix,sep="_"))
-write.table(tb_summary_p_overall,file=paste("tb_summary_p_overall_",out_suffix,sep="_"))
+  list_extract_mod <- vector("list",length=length(list_model_objects))
+  names(list_extract_mod) <- region_name 
+  
+  for(i in 1:length(list_model_objects)){
+    #Reading object files produced earlier:
+    model_obj <- load_obj(list_model_objects[[i]]) #ref 1 for overall model?
+    #undebug(extract_multinom_mod_information)
+    list_extract_mod[[i]] <- lapply(model_obj,FUN=extract_multinom_mod_information)
+  }
+  list_extract_mod_fname <- paste("list_extract_mod_",out_suffix_s,".RData",sep="")
+  save(list_extract_mod,file=list_extract_mod_fname)
+  #test <- extract_multinom_mod_information(model_obj[[1]])#ref 1
+  
+  names(list_extract_mod[[1]][[1]]) #
+  #> names(list_extrat_mod[[1]][[1]])
+  #[1] "AIC_values"                 "list_coef"                  "list_extract_coef_p_values"
+  
+  #list_extract_mod <- list_extrat_mod
+  
+  #list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod1$p #this is for overall
+  #list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2$p
+  #list_tables_reg_param <- names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
+  
+  #> names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
+  #[1] "p"                       "z"                       "summary_coefficients"    "summary_standard_errors"
+  
+  #list_region_name <- c("Campeche","Quintana_Roo","Yucatan","overall")
+  
+  ### Generate summary tables with p, z, coef, std_errors for each term and model by region
+  
+  #undebug(create_summary_tables_reg_multinom)
+  reg_param<- "p"
+  tb_summary_p <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
+  reg_param<- "summary_coefficients"
+  tb_summary_coef <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
+  reg_param<- "summary_standard_errors"
+  tb_summary_std_errors <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
+  reg_param<- "z"
+  tb_summary_z <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
+  
+  ##Collapse tables for each region
+  
+  list_tb_summary_p <- lapply(tb_summary_p, function(x){do.call(rbind,x)}) #equal to region's length
+  list_tb_summary_summary_coef <- lapply(tb_summary_coef, function(x){do.call(rbind,x)})
+  list_tb_summary_summary_std_errors <- lapply(tb_summary_std_errors, function(x){do.call(rbind,x)})
+  list_tb_summary_summary_z <- lapply(tb_summary_z, function(x){do.call(rbind,x)})
+  
+  out_suffix_s
+  write_table_fun <- function(tb_summary,out_suffix_s,out_dir){
+    
+    #write.table(tb_summary,file=paste("tb_summary_p_Campeche_",out_suffix,".txt",sep=""),sep=",")
+    write.table(tb_summary,file=paste("tb_summary_p_Campeche_",out_suffix,".txt",sep=""),sep=",")
+    d
+  }
+  
+  for(i in 1:length(list_extract_mod)){
+    
+    list_tb_summary_p <- do.call(rbind,tb_summary_p[[i]])
+    list_tb_summary_p <- do.call(rbind,tb_summary_p[[i]])
+    
+    #tb_summary_p_Campeche <- do.call(rbind,tb_summary_p[[1]])
+    #tb_summary_p_Quintana_Roo <- do.call(rbind,tb_summary_p[[2]])
+    #tb_summary_p_Yucatan <- do.call(rbind,tb_summary_p[[3]])
+    #tb_summary_p_overall <- do.call(rbind,tb_summary_p[[4]])
+    
+    #repeat this for every table and regression param , add to function above!!!
+    
+    write.table(tb_summary_p_Campeche,file=paste("tb_summary_p_Campeche_",out_suffix,".txt",sep=""),sep=",")
+    write.table(tb_summary_p_Quintana_Roo,file=paste("tb_summary_p_Quintana_Roo_",out_suffix,".txt",sep=""),sep=",")
+    write.table(tb_summary_p_Yucatan,file=paste("tb_summary_p_Yucatan_",out_suffix,".txt",sep=""),sep=",")
+    write.table(tb_summary_p_overall,file=paste("tb_summary_p_overall_",out_suffix,".txt",sep=""),sep=",")
+    
+  }
+  
+  ### Prepare objects to return
+  
+  list()
+  return()
+}
 
 ### Now get AIC and log likelihood
 
 list_df_AIC <- vector("list",length=3)
+
+list_extract_mod[[4]][[1]]$AIC_values
+list_extract_mod[[4]][[1]]$list_extract_coef_p_values
 
 for(k in 1:3){
   
@@ -318,3 +366,28 @@ data_df$FIRE_bool <- as.numeric(data_df$FIRE_bool)
 #2-tailed z test
 #p <- (1 - pnorm(abs(z), 0, 1))*2
 #p
+
+
+
+#
+# Browse[4]> extract_mod[[i]]
+# $p
+# (Intercept) cy_r
+# 1           0    0
+# 2           0    0
+# 
+# $z
+# (Intercept)     cy_r
+# 1    9.603259 16.92589
+# 2   13.327639 12.93944
+# 
+# $summary_coefficients
+# (Intercept)     cy_r
+# 1    1.835426 5.676169
+# 2    2.535650 4.330786
+# 
+# $summary_standard_errors
+# (Intercept)      cy_r
+# 1   0.1911253 0.3353542
+# 2   0.1902550 0.3346966
+

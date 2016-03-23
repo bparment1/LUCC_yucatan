@@ -6,7 +6,7 @@
 #
 #AUTHOR: Benoit Parmentier, Marco Millones                                                                      #
 #DATE CREATED: 02/12/2016 
-#DATE MODIFIED: 02/24/2016
+#DATE MODIFIED: 03/23/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan, Marco Millones
 #   
@@ -207,7 +207,7 @@ extract_multinom_mod_information <- function(mod){
   list_coef <- lapply(list_mod,function(x){summary(x)$coefficients})
   #list_formulas <- lapply(list_mod,function(x){summary(x)$formula})
   list_extract_coef_p_values <- lapply(list_mod,FUN=extract_coef_p_values)
-  names(list_extract_coef_p_values) <-names_mod
+  names(list_extract_coef_p_values) <- names_mod
   multinom_extract_obj <- list(AIC_values,list_coef,list_extract_coef_p_values)
   names(multinom_extract_obj) <- c("AIC_values","list_coef","list_extract_coef_p_values")
   return(multinom_extract_obj)
@@ -221,10 +221,12 @@ create_summary_tables_reg_multinom <- function(list_extract_mod,reg_param,ref_va
   #list_extract_mod
   #reg_param,
   #ref_var
-  #list_region_name
+  #list_region_name: the name for each region e.g. Campeche, Yucatan,Quitano Ro, Overall
   #list_models
   
   list_df_table_mod <- vector("list",length(list_extract_mod))
+  ## if list_extract_mod is a list greater than 1 then exctract for each.
+  ## in this context, the length is 4: Campeche, Yucatan,Quitano Ro, Overall
   for(i in 1:length(list_extract_mod)){
     #reg_param <- list_tables_reg_param[1] #start with p value first
     #list_models
@@ -233,7 +235,7 @@ create_summary_tables_reg_multinom <- function(list_extract_mod,reg_param,ref_va
     list_df_table_ref <- vector("list",length(ref_var))
     #extract_mod <- list_extract_mod[[4]][[1]]$list_extract_coef_p_values
     for(k in 1:length(ref_var)){
-      extract_mod <- list_extract_mod[[i]][[k]]$list_extract_coef_p_values
+      extract_mod <- list_extract_mod[[i]][[k]]$list_extract_coef_p_values #this is the general table/list
       ref_var_tmp <- k
       #debug(produce_regression_parameter_table)
       test_df_tmp <- produce_regression_parameter_table(reg_param,extract_mod,ref_var_tmp,list_models,region_name)

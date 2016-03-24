@@ -275,6 +275,95 @@ produce_regression_parameter_table <- function(reg_param,extract_mod,ref_var_tmp
   return(test_df)
 }
 
+generate_summary_tables_from_models <- function(list_models_objects,ref_var,region_name,out_suffix_s,out_dir){
+  #This function generate summary tables from multinom model produced beforehand.
+  #When a list of models is provided csv files are produced with each models term for p, coefficients,
+  #standard errors and z values of each term.
+  #
+  #Inputs
+  #1) list_models_objects
+  #2) ref_var
+  #3) region_name
+  #4) out_suffix_s
+  #5) out_dir
+  #Outputs
+  #
+  
+  ## Functions used in the script ####
+  
+  write_table_fun <- function(i,list_tb_summary,out_filename){
+    #write.table(tb_summary,file=paste("tb_summary_p_Campeche_",out_suffix,".txt",sep=""),sep=",")
+    write.table(list_tb_summary[[i]],file=out_filename[i],sep=",")
+    return(out_filename[i])
+  }
+  
+  ## Start ##
+  
+  list_extract_mod <- vector("list",length=length(list_model_objects))
+  names(list_extract_mod) <- region_name 
+  
+  for(i in 1:length(list_model_objects)){
+    #Reading object files produced earlier:
+    model_obj <- load_obj(list_model_objects[[i]]) #ref 1 for overall model?
+    #undebug(extract_multinom_mod_information)
+    list_extract_mod[[i]] <- lapply(model_obj,FUN=extract_multinom_mod_information)
+  }
+  list_extract_mod_fname <- paste("list_extract_mod_",out_suffix_s,".RData",sep="")
+  save(list_extract_mod,file=list_extract_mod_fname)
+  #test <- extract_multinom_mod_information(model_obj[[1]])#ref 1
+  
+  names(list_extract_mod[[1]][[1]]) #
+  #> names(list_extrat_mod[[1]][[1]])
+  #[1] "AIC_values"                 "list_coef"                  "list_extract_coef_p_values"
+  
+  #list_extract_mod <- list_extrat_mod
+  
+  #list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod1$p #this is for overall
+  #list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2$p
+  #list_tables_reg_param <- names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
+  
+  #> names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
+  #[1] "p"                       "z"                       "summary_coefficients"    "summary_standard_errors"
+  
+  #list_region_name <- c("Campeche","Quintana_Roo","Yucatan","overall")
+  
+  ### Generate summary tables with p, z, coef, std_errors for each term and model by region
+  
+  #undebug(create_summary_tables_reg_multinom)
+  reg_param<- "p"
+  tb_summary_p <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
+  reg_param<- "summary_coefficients"
+  tb_summary_coef <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
+  reg_param<- "summary_standard_errors"
+  tb_summary_std_errors <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
+  reg_param<- "z"
+  tb_summary_z <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
+  
+  ##Collapse tables for each region
+  
+  list_tb_summary_p <- lapply(tb_summary_p, function(x){do.call(rbind,x)}) #equal to region's length
+  list_tb_summary_coef <- lapply(tb_summary_coef, function(x){do.call(rbind,x)})
+  list_tb_summary_std_errors <- lapply(tb_summary_std_errors, function(x){do.call(rbind,x)})
+  list_tb_summary_z <- lapply(tb_summary_z, function(x){do.call(rbind,x)})
+  
+  list_out_suffix_s <- paste(region_name,out_suffix_s,sep="_")
+  
+  out_filename <- file.path(out_dir,paste("tb_summary_p_",list_out_suffix_s,".txt",sep=""))
+  out_filename_summary_p <- lapply(1:length(list_tb_summary_p),FUN=write_table_fun,list_tb_summary=list_tb_summary_p,out_filename=out_filename)
+  out_filename <- file.path(out_dir,paste("tb_summary_coef_",list_out_suffix_s,".txt",sep=""))
+  out_filename_summary_coef <- lapply(1:length(list_tb_summary_coef),FUN=write_table_fun,list_tb_summary=list_tb_summary_coef,out_filename=out_filename)
+  out_filename <- file.path(out_dir,paste("tb_summary_std_errors_",list_out_suffix_s,".txt",sep=""))
+  out_filename_summary_std_errors <- lapply(1:length(list_tb_summary_p),FUN=write_table_fun,list_tb_summary=list_tb_summary_std_errors,out_filename=out_filename)
+  out_filename <- file.path(out_dir,paste("tb_summary_z_",list_out_suffix_s,".txt",sep=""))
+  out_filename_summary_z <- lapply(1:length(list_tb_summary_z),FUN=write_table_fun,list_tb_summary=list_tb_summary_z,out_filename=out_filename)
+  
+  ### Prepare objects to return
+  
+  list_out_filename <- list(out_filename_summary_p,out_filename_summary_coef,out_filename_summary_std_errors,out_filename_summary_z)
+  list_out_filename <- unlist(list_out_filename)
+  
+  return(list_out_filename)
+}
 
 ############### END OF SCRIPT ###################
 

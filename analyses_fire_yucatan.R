@@ -42,7 +42,7 @@ library(plyr)
 
 ###### Functions used in this script
 
-functions_analyses_script <- "analyses_fire_yucatan_functions_03232016.R" #PARAM 1
+functions_analyses_script <- "analyses_fire_yucatan_functions_03232016b.R" #PARAM 1
 script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
 source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
 
@@ -223,94 +223,8 @@ region_name <- list_region_name
 
 ### Make this part a function:
 debug(generate_summary_tables_from_models)
-test<- generate_summary_tables_from_models(list_models_objects,ref_var,region_name)
+test<- generate_summary_tables_from_models(list_models_objects,ref_var,region_name,out_suffix,out_dir)
 
-generate_summary_tables_from_models <- function(list_models_objects,ref_var,region_name){
-  #
-  #
-  #
-  
-  ## Start ##
-
-  list_extract_mod <- vector("list",length=length(list_model_objects))
-  names(list_extract_mod) <- region_name 
-  
-  for(i in 1:length(list_model_objects)){
-    #Reading object files produced earlier:
-    model_obj <- load_obj(list_model_objects[[i]]) #ref 1 for overall model?
-    #undebug(extract_multinom_mod_information)
-    list_extract_mod[[i]] <- lapply(model_obj,FUN=extract_multinom_mod_information)
-  }
-  list_extract_mod_fname <- paste("list_extract_mod_",out_suffix_s,".RData",sep="")
-  save(list_extract_mod,file=list_extract_mod_fname)
-  #test <- extract_multinom_mod_information(model_obj[[1]])#ref 1
-  
-  names(list_extract_mod[[1]][[1]]) #
-  #> names(list_extrat_mod[[1]][[1]])
-  #[1] "AIC_values"                 "list_coef"                  "list_extract_coef_p_values"
-  
-  #list_extract_mod <- list_extrat_mod
-  
-  #list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod1$p #this is for overall
-  #list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2$p
-  #list_tables_reg_param <- names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
-  
-  #> names(list_extract_mod[[4]][[1]]$list_extract_coef_p_values$mod2)
-  #[1] "p"                       "z"                       "summary_coefficients"    "summary_standard_errors"
-  
-  #list_region_name <- c("Campeche","Quintana_Roo","Yucatan","overall")
-  
-  ### Generate summary tables with p, z, coef, std_errors for each term and model by region
-  
-  #undebug(create_summary_tables_reg_multinom)
-  reg_param<- "p"
-  tb_summary_p <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
-  reg_param<- "summary_coefficients"
-  tb_summary_coef <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
-  reg_param<- "summary_standard_errors"
-  tb_summary_std_errors <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
-  reg_param<- "z"
-  tb_summary_z <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
-  
-  ##Collapse tables for each region
-  
-  list_tb_summary_p <- lapply(tb_summary_p, function(x){do.call(rbind,x)}) #equal to region's length
-  list_tb_summary_summary_coef <- lapply(tb_summary_coef, function(x){do.call(rbind,x)})
-  list_tb_summary_summary_std_errors <- lapply(tb_summary_std_errors, function(x){do.call(rbind,x)})
-  list_tb_summary_summary_z <- lapply(tb_summary_z, function(x){do.call(rbind,x)})
-  
-  out_suffix_s
-  write_table_fun <- function(tb_summary,out_suffix_s,out_dir){
-    
-    #write.table(tb_summary,file=paste("tb_summary_p_Campeche_",out_suffix,".txt",sep=""),sep=",")
-    write.table(tb_summary,file=paste("tb_summary_p_Campeche_",out_suffix,".txt",sep=""),sep=",")
-    d
-  }
-  
-  for(i in 1:length(list_extract_mod)){
-    
-    list_tb_summary_p <- do.call(rbind,tb_summary_p[[i]])
-    list_tb_summary_p <- do.call(rbind,tb_summary_p[[i]])
-    
-    #tb_summary_p_Campeche <- do.call(rbind,tb_summary_p[[1]])
-    #tb_summary_p_Quintana_Roo <- do.call(rbind,tb_summary_p[[2]])
-    #tb_summary_p_Yucatan <- do.call(rbind,tb_summary_p[[3]])
-    #tb_summary_p_overall <- do.call(rbind,tb_summary_p[[4]])
-    
-    #repeat this for every table and regression param , add to function above!!!
-    
-    write.table(tb_summary_p_Campeche,file=paste("tb_summary_p_Campeche_",out_suffix,".txt",sep=""),sep=",")
-    write.table(tb_summary_p_Quintana_Roo,file=paste("tb_summary_p_Quintana_Roo_",out_suffix,".txt",sep=""),sep=",")
-    write.table(tb_summary_p_Yucatan,file=paste("tb_summary_p_Yucatan_",out_suffix,".txt",sep=""),sep=",")
-    write.table(tb_summary_p_overall,file=paste("tb_summary_p_overall_",out_suffix,".txt",sep=""),sep=",")
-    
-  }
-  
-  ### Prepare objects to return
-  
-  list()
-  return()
-}
 
 ### Now get AIC and log likelihood
 

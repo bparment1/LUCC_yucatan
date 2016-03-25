@@ -7,9 +7,9 @@
 #
 #AUTHOR: Benoit Parmentier                                                                #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 03/23/2016
+#DATE MODIFIED: 03/24/2016
 #Version: 1
-#PROJECT: Land cover Change Yucatan with Marco Millones as lead
+#PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
 #COMMENTS:  Separation between function script and main script
 #TODO:
@@ -227,25 +227,30 @@ test<- generate_summary_tables_from_models(list_models_objects,ref_var,region_na
 
 
 ### Now get AIC and log likelihood
-
-list_df_AIC <- vector("list",length=3)
-
-list_extract_mod[[4]][[1]]$AIC_values
-list_extract_mod[[4]][[1]]$list_extract_coef_p_values
-
-for(k in 1:3){
+extract_model_metrics_accuracy <- function(list_extract_mod,out_suffix,out_dir){
+  #
+  #
   
-  extract_mod <- list_extract_mod[[4]][[1]]
-  df <- as.data.frame(extract_mod[[k]]$AIC_values)
-  region_name <- names(list_extract_mod)[4]
-  names(df) <- "AIC"
-  df$ref_var <- k
-  df$
-    df$mod_name <- paste("mod",1:nrow(df))
-  list_df_AIC[[k]] <- df
+  list_df_AIC <- vector("list",length=3)
+  
+  list_extract_mod[[4]][[1]]$AIC_values
+  #list_extract_mod[[4]][[1]]$list_extract_coef_p_values
+  
+  for(k in 1:3){
+    
+    extract_mod <- list_extract_mod[[4]][[1]]
+    df <- as.data.frame(extract_mod[[k]]$AIC_values)
+    region_name <- names(list_extract_mod)[4]
+    names(df) <- "AIC"
+    df$ref_var <- k
+    df$df$mod_name <- paste("mod",1:nrow(df))
+    list_df_AIC[[k]] <- df
+  }
+  
+  test<-do.call(rbind,list_df_AIC)
+  
+  
 }
-
-test<-do.call(rbind,list_df_AIC)
 
 
 ##### PART IV: Get general information about the data ######

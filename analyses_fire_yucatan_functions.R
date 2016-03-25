@@ -4,11 +4,11 @@
 #The goal is to show how fire can be used as proxy for land cover change in the region.      
 #This script implements a spatial logit model with explantory variables.                                                     #
 #
-#AUTHOR: Benoit Parmentier, Marco Millones                                                                      #
+#AUTHOR: Benoit Parmentier                                                                    #
 #DATE CREATED: 02/12/2016 
-#DATE MODIFIED: 03/23/2016
+#DATE MODIFIED: 03/24/2016
 #Version: 1
-#PROJECT: Land cover Change Yucatan, Marco Millones
+#PROJECT: Land cover Change Yucatan with Marco Millones
 #   
 #COMMENTS: Initial commit: Separation between function script and main script
 #TODO:
@@ -357,10 +357,15 @@ generate_summary_tables_from_models <- function(list_models_objects,ref_var,regi
   out_filename <- file.path(out_dir,paste("tb_summary_z_",list_out_suffix_s,".txt",sep=""))
   out_filename_summary_z <- lapply(1:length(list_tb_summary_z),FUN=write_table_fun,list_tb_summary=list_tb_summary_z,out_filename=out_filename)
   
-  ### Prepare objects to return
   
   list_out_filename <- list(out_filename_summary_p,out_filename_summary_coef,out_filename_summary_std_errors,out_filename_summary_z)
   list_out_filename <- unlist(list_out_filename)
+  
+  ##Now gather AIC and 
+  
+    
+  ### Prepare objects to return
+  
   
   return(list_out_filename)
 }

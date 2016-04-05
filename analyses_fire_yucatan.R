@@ -7,7 +7,7 @@
 #
 #AUTHOR: Benoit Parmentier                                                                #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 03/24/2016
+#DATE MODIFIED: 04/05/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
@@ -39,10 +39,11 @@ library(reshape2)                        # data wrangling
 library(mlogit)                          # maximum liklihood estimation and multinomial model
 library(parallel)                        # parralel programming and multi cores
 library(plyr)
+library(rgeos)
 
 ###### Functions used in this script
 
-functions_analyses_script <- "analyses_fire_yucatan_functions_03232016b.R" #PARAM 1
+functions_analyses_script <- "analyses_fire_yucatan_functions_03242016.R" #PARAM 1
 script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
 source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
 
@@ -61,6 +62,8 @@ NA_value <- -9999 #PARAM6
 NA_flag_val <- NA_value #PARAM7
 out_suffix <-"yucatan_CI_analyses_03232016" #output suffix for the files and ouptu folder #PARAM 8
 create_out_dir_param=TRUE #PARAM9
+id_name <- "pointid"
+
 state_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/IN_QGIS/State_dis_from_muni.shp"
 #data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.xlsx" #contains the whole dataset
 data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.csv" #contains the whole dataset
@@ -145,8 +148,10 @@ state_outline <- readOGR(dsn=dirname(state_fname), filename)
 
 proj4string(data_df_spdf) <- proj4string(state_outline)
 l_poly <- over(data_df_spdf,state_outline) #points in polygon operation
-data_df_spdf <- cbind(data_df_spdf,l_poly) #join back the data
-coordinates(data_df_spdf) <- coord_names
+l_poly[[id_name]] <- data_df_spdf[[id_name]]
+data_df_spdf<- merge(data_df_spdf,l_poly,by=id_name)
+#data_df_spdf <- cbind(data_df_spdf,l_poly) #join back the data
+#coordinates(data_df_spdf) <- coord_names
 #unique(data_df_spdf$FIRST_NOM_)
 data_df_spdf$state <- as.character(data_df_spdf$FIRST_NOM_)
 table(data_df_spdf$state)
@@ -222,7 +227,7 @@ list_region_name <- c("Campeche","Quintana_Roo","Yucatan","overall")
 region_name <- list_region_name
 
 ### Make this part a function:
-debug(generate_summary_tables_from_models)
+#debug(generate_summary_tables_from_models)
 test<- generate_summary_tables_from_models(list_models_objects,ref_var,region_name,out_suffix,out_dir)
 
 
@@ -232,6 +237,25 @@ extract_model_metrics_accuracy <- function(list_extract_mod,out_suffix,out_dir){
   #
   
   list_df_AIC <- vector("list",length=3)
+  
+  list_extract_mod <- vector("list",length=length(list_model_objects))
+  names(list_extract_mod) <- region_name 
+  
+  for(i in 1:length(list_model_objects)){
+    #Reading object files produced earlier:
+    model_obj <- load_obj(list_model_objects[[i]]) #ref 1 for overall model?
+    #undebug(extract_multinom_mod_information)
+    list_extract_mod[[i]] <- lapply(model_obj,FUN=extract_multinom_mod_information)
+  }
+  list_extract_mod_fname <- paste("list_extract_mod_",out_suffix_s,".RData",sep="")
+  save(list_extract_mod,file=list_extract_mod_fname)
+  #test <- extract_multinom_mod_information(model_obj[[1]])#ref 1
+  
+  
+  names_mod <- paste("mod",1:length(list_mod),sep="")
+  AIC_values <- unlist(lapply(list_mod,function(x){x$AIC}))
+  names(AIC_values) <- names_mod
+  
   
   list_extract_mod[[4]][[1]]$AIC_values
   #list_extract_mod[[4]][[1]]$list_extract_coef_p_values

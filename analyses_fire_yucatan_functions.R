@@ -6,7 +6,7 @@
 #
 #AUTHOR: Benoit Parmentier                                                                    #
 #DATE CREATED: 02/12/2016 
-#DATE MODIFIED: 03/24/2016
+#DATE MODIFIED: 04/19/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones
 #   
@@ -114,9 +114,8 @@ run_multinom_mod_mc <- function(i,list_param){
   #debug(run_multinom_mod)
   list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df,ref_var_name=ref_var_name)
   names(list_mod) <- paste("ref_",ref_var_name,sep="")
-  names_mod_obj <- file.path(".",paste("list_mod_","ref_",ref_var_name,"_",out_suffix_s,".RData",sep=""))
-  save(list_mod,file= names_mod_obj)
-  
+  ## extract the coefficients from the model and exponentiate
+  exp(coef(test))  
   #for(i in 1:length(unique_val_y_var)){
   #  ref_var_name <- unique_val_y_var[i]
   #  #debug(run_multinom_mod)
@@ -188,6 +187,11 @@ extract_coef_p_values <- function(mod){
   return(summary_obj)
 }
 
+
+## extract the coefficients from the model and exponentiate
+#exp(coef(test))
+
+
 extract_multinom_mod_information <- function(mod){
   #modify to use mclapply later!!!
   
@@ -205,11 +209,13 @@ extract_multinom_mod_information <- function(mod){
   AIC_values <- unlist(lapply(list_mod,function(x){x$AIC}))
   names(AIC_values) <- names_mod
   list_coef <- lapply(list_mod,function(x){summary(x)$coefficients})
+  #adding extraction of odds ratio
+  list_odds <- lapply(list_mod,function(x){exp(coef(x))})
   #list_formulas <- lapply(list_mod,function(x){summary(x)$formula})
   list_extract_coef_p_values <- lapply(list_mod,FUN=extract_coef_p_values)
   names(list_extract_coef_p_values) <- names_mod
-  multinom_extract_obj <- list(AIC_values,list_coef,list_extract_coef_p_values)
-  names(multinom_extract_obj) <- c("AIC_values","list_coef","list_extract_coef_p_values")
+  multinom_extract_obj <- list(AIC_values,list_coef,list_extract_coef_p_values,list_odds)
+  names(multinom_extract_obj) <- c("AIC_values","list_coef","list_extract_coef_p_values","list_odds")
   return(multinom_extract_obj)
 }
 

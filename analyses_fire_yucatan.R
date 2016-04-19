@@ -218,7 +218,6 @@ for(i in 1:length(unique_val_zones)){
 
 #### PART III: extract information from models ######
 
-#test<-load_obj("data_df_by_region_model_obj_val_zone__Campeche_yucatan_CI_analyses_03232016.RData")
 
 list_model_objects <- list.files(out_dir,"*model_obj*",full.names=T)
 #debug(extract_multinom_mod_information)  
@@ -230,21 +229,18 @@ region_name <- list_region_name
 #debug(generate_summary_tables_from_models)
 test<- generate_summary_tables_from_models(list_model_objects,ref_var,region_name,out_suffix,out_dir)
 
+### Get accuracy information for models: AIC, deviance, log likelihood, nb of observation etc.
+tb_models_accuracy <- extract_model_metrics_accuracy(list_model_objects,region_name,out_suffix,out_dir)
 #list_extract_mod_yucatan_CI_analyses_04192016.RData
+
+
+
+
 ### Now get AIC and log likelihood
 #extract_model_metrics_accuracy <- function(list_extract_mod,out_suffix,out_dir){
 extract_model_metrics_accuracy <- function(list_model_objects,region_name,out_suffix,out_dir){
   #Extract AIC, loglikelihood
   #Extract odd ratio and interval
-  
-  list_df_AIC <- vector("list",length=3)
-  list_df_res_deviance <- vector("list",length=3)
-  #list_extract_mod <- vector("list",length=length(list_model_objects))
-  
-  #names(list_extract_mod) <- region_name 
-  names_mod <- paste("mod",1:length(list_mod),sep="")
-  AIC_values <- unlist(lapply(list_mod,function(x){x$AIC}))
-  names(AIC_values) <- names_mod
   
   ##use parallelization...
   list_df_val <- vector("list",length=length(list_model_objects))
@@ -266,13 +262,17 @@ extract_model_metrics_accuracy <- function(list_model_objects,region_name,out_su
     n_obs <- unlist(lapply(list_mod,function(x){nrow(x$fitted.values)})) #this value is about 1/2 of deviance
     names(n_obs) <- names_mod    
     df_val <- data.frame(AIC=AIC_values,deviance=res_deviance_values,loglikelihood=loglikelihood_values,n=n_obs)
-    #
-    #
+    df_val$region <-region_name[i]
+    df_val$mod <- rownames(df_val)
+    rownames(df_val) <- NULL
     list_df_val[[i]] <- df_val
   }
 
-  test<-do.call(rbind,list_df_AIC)
+  df_all <-do.call(rbind,list_df_val)
+  out_filename <- file.path(out_dir,paste("tb_models_summary_accuracy_",out_suffix,".txt",sep=""))
+  write.table(df_all,file=out_filename,sep=",")
   
+  return(df_all) 
 }
 
 #### Add extraction of fitted values and residuals??

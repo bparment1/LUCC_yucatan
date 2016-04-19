@@ -7,7 +7,7 @@
 #
 #AUTHOR: Benoit Parmentier                                                                #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 04/05/2016
+#DATE MODIFIED: 04/19/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
@@ -43,7 +43,7 @@ library(rgeos)
 
 ###### Functions used in this script
 
-functions_analyses_script <- "analyses_fire_yucatan_functions_03242016.R" #PARAM 1
+functions_analyses_script <- "analyses_fire_yucatan_functions_04192016.R" #PARAM 1
 script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
 source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
 
@@ -60,7 +60,7 @@ CRS_reg <- CRS_WGS84 # PARAM 4
 file_format <- ".rst" #PARAM5
 NA_value <- -9999 #PARAM6
 NA_flag_val <- NA_value #PARAM7
-out_suffix <-"yucatan_CI_analyses_03232016" #output suffix for the files and ouptu folder #PARAM 8
+out_suffix <-"yucatan_CI_analyses_04192016" #output suffix for the files and ouptu folder #PARAM 8
 create_out_dir_param=TRUE #PARAM9
 id_name <- "pointid"
 
@@ -228,54 +228,57 @@ region_name <- list_region_name
 
 ### Make this part a function:
 #debug(generate_summary_tables_from_models)
-test<- generate_summary_tables_from_models(list_models_objects,ref_var,region_name,out_suffix,out_dir)
+test<- generate_summary_tables_from_models(list_model_objects,ref_var,region_name,out_suffix,out_dir)
 
-
+#list_extract_mod_yucatan_CI_analyses_04192016.RData
 ### Now get AIC and log likelihood
-extract_model_metrics_accuracy <- function(list_extract_mod,out_suffix,out_dir){
-  #
-  #
+#extract_model_metrics_accuracy <- function(list_extract_mod,out_suffix,out_dir){
+extract_model_metrics_accuracy <- function(list_model_objects,region_name,out_suffix,out_dir){
+  #Extract AIC, loglikelihood
+  #Extract odd ratio and interval
   
   list_df_AIC <- vector("list",length=3)
+  list_df_res_deviance <- vector("list",length=3)
+  #list_extract_mod <- vector("list",length=length(list_model_objects))
   
-  list_extract_mod <- vector("list",length=length(list_model_objects))
-  names(list_extract_mod) <- region_name 
+  #names(list_extract_mod) <- region_name 
+  names_mod <- paste("mod",1:length(list_mod),sep="")
+  AIC_values <- unlist(lapply(list_mod,function(x){x$AIC}))
+  names(AIC_values) <- names_mod
+  
+  ##use parallelization...
+  list_df_val <- vector("list",length=length(list_model_objects))
   
   for(i in 1:length(list_model_objects)){
     #Reading object files produced earlier:
     model_obj <- load_obj(list_model_objects[[i]]) #ref 1 for overall model?
     #undebug(extract_multinom_mod_information)
-    list_extract_mod[[i]] <- lapply(model_obj,FUN=extract_multinom_mod_information)
+    #list_extract_mod[[i]] <- lapply(model_obj,FUN=extract_multinom_mod_information)
+    #list_extract_mod[[i]]
+    list_mod <- model_obj[[1]] #use ref1
+    #mod <- list_mod[[1]]
+    names_mod <- paste("mod",1:length(list_mod),sep="")
+    AIC_values <- unlist(lapply(list_mod,function(x){x$AIC}))
+    res_deviance_values <- unlist(lapply(list_mod,function(x){x$deviance}))
+    names(res_deviance_values) <- names_mod
+    loglikelihood_values <- unlist(lapply(list_mod,function(x){x$value})) #this value is about 1/2 of deviance
+    names(loglikelihood_values) <- names_mod
+    n_obs <- unlist(lapply(list_mod,function(x){nrow(x$fitted.values)})) #this value is about 1/2 of deviance
+    names(n_obs) <- names_mod    
+    df_val <- data.frame(AIC=AIC_values,deviance=res_deviance_values,loglikelihood=loglikelihood_values,n=n_obs)
+    #
+    #
+    list_df_val[[i]] <- df_val
   }
-  list_extract_mod_fname <- paste("list_extract_mod_",out_suffix_s,".RData",sep="")
-  save(list_extract_mod,file=list_extract_mod_fname)
-  #test <- extract_multinom_mod_information(model_obj[[1]])#ref 1
-  
-  
-  names_mod <- paste("mod",1:length(list_mod),sep="")
-  AIC_values <- unlist(lapply(list_mod,function(x){x$AIC}))
-  names(AIC_values) <- names_mod
-  
-  
-  list_extract_mod[[4]][[1]]$AIC_values
-  #list_extract_mod[[4]][[1]]$list_extract_coef_p_values
-  
-  for(k in 1:3){
-    
-    extract_mod <- list_extract_mod[[4]][[1]]
-    df <- as.data.frame(extract_mod[[k]]$AIC_values)
-    region_name <- names(list_extract_mod)[4]
-    names(df) <- "AIC"
-    df$ref_var <- k
-    df$df$mod_name <- paste("mod",1:nrow(df))
-    list_df_AIC[[k]] <- df
-  }
-  
+
   test<-do.call(rbind,list_df_AIC)
-  
   
 }
 
+#### Add extraction of fitted values and residuals??
+
+#length(mod$fitted.values)
+#dim(mod$fitted.values)
 
 ##### PART IV: Get general information about the data ######
 

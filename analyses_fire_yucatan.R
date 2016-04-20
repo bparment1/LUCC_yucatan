@@ -39,7 +39,9 @@ library(reshape2)                        # data wrangling
 library(mlogit)                          # maximum liklihood estimation and multinomial model
 library(parallel)                        # parralel programming and multi cores
 library(plyr)
-library(rgeos)
+library(rgeos)                           # topology and vector spatial queries and operations
+library(afex)                            # functions related to ANOVA
+library(car)
 
 ###### Functions used in this script
 
@@ -233,12 +235,13 @@ test<- generate_summary_tables_from_models(list_model_objects,ref_var,region_nam
 tb_models_accuracy <- extract_model_metrics_accuracy(list_model_objects,region_name,out_suffix,out_dir)
 #list_extract_mod_yucatan_CI_analyses_04192016.RData
 
+## Get odds ratio
 
 
 
 ### Now get AIC and log likelihood
 #extract_model_metrics_accuracy <- function(list_extract_mod,out_suffix,out_dir){
-extract_model_metrics_accuracy <- function(list_model_objects,region_name,out_suffix,out_dir){
+extract_model_metrics_accuracy <- function(list_model_objects,region_name,num_cores,out_suffix,out_dir){
   #Extract AIC, loglikelihood
   #Extract odd ratio and interval
   
@@ -261,9 +264,29 @@ extract_model_metrics_accuracy <- function(list_model_objects,region_name,out_su
     names(loglikelihood_values) <- names_mod
     n_obs <- unlist(lapply(list_mod,function(x){nrow(x$fitted.values)})) #this value is about 1/2 of deviance
     names(n_obs) <- names_mod    
-    df_val <- data.frame(AIC=AIC_values,deviance=res_deviance_values,loglikelihood=loglikelihood_values,n=n_obs)
+    
+    ##This part takes a very long time
+    ## Get log likelihood ratio,this is one by term maybe use in odds ratio!!!
+    #set_sum_contrasts()
+    #list_anova <- mclapply(list_mod,function(x){Anova(x,type="III")}, mc.preschedule=FALSE,mc.cores = num_cores) #this value is about 1/2 of deviance
+    #names(list_anova) <- names_mod
+    #LR_Chi_values <- unlist(lapply( list_anova ,function(x){x$`LR Chisq`})) #this value is about 1/2 of deviance
+    #LR_Chi_p_values <- unlist(lapply( list_anova ,function(x){x$`Pr(>Chisq)`})) #this value is about 1/2 of deviance
+    name_list_anova <- file.path(".",paste("list_anova_",region_name[i],"_",out_suffix_s,".RData",sep=""))
+    save(list_anova,file= name_list_anova )
+    
+    #test<-Anova(mod,type="III")
+    #test$`LR Chisq`
+
+    df_val <- data.frame(mod = names_mod,
+                         AIC=AIC_values,
+                         deviance=res_deviance_values,
+                         loglikelihood=loglikelihood_values,
+                         #LR = LR_Chi_values,
+                         #LR_p=LR_Chi_p_values
+                         n=n_obs)
     df_val$region <-region_name[i]
-    df_val$mod <- rownames(df_val)
+    #df_val$mod <- rownames(df_val)
     rownames(df_val) <- NULL
     list_df_val[[i]] <- df_val
   }

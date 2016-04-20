@@ -376,6 +376,66 @@ generate_summary_tables_from_models <- function(list_models_objects,ref_var,regi
   return(list_out_filename)
 }
 
+
+### Now get AIC and log likelihood
+#extract_model_metrics_accuracy <- function(list_extract_mod,out_suffix,out_dir){
+extract_model_metrics_accuracy <- function(list_model_objects,region_name,num_cores,out_suffix,out_dir){
+  #Extract AIC, loglikelihood
+  #Extract odd ratio and interval
+  
+  ##use parallelization...
+  list_df_val <- vector("list",length=length(list_model_objects))
+  
+  for(i in 1:length(list_model_objects)){
+    #Reading object files produced earlier:
+    model_obj <- load_obj(list_model_objects[[i]]) #ref 1 for overall model?
+    #undebug(extract_multinom_mod_information)
+    #list_extract_mod[[i]] <- lapply(model_obj,FUN=extract_multinom_mod_information)
+    #list_extract_mod[[i]]
+    list_mod <- model_obj[[1]] #use ref1
+    #mod <- list_mod[[1]]
+    names_mod <- paste("mod",1:length(list_mod),sep="")
+    AIC_values <- unlist(lapply(list_mod,function(x){x$AIC}))
+    res_deviance_values <- unlist(lapply(list_mod,function(x){x$deviance}))
+    names(res_deviance_values) <- names_mod
+    loglikelihood_values <- unlist(lapply(list_mod,function(x){x$value})) #this value is about 1/2 of deviance
+    names(loglikelihood_values) <- names_mod
+    n_obs <- unlist(lapply(list_mod,function(x){nrow(x$fitted.values)})) #this value is about 1/2 of deviance
+    names(n_obs) <- names_mod    
+    
+    ##This part takes a very long time
+    ## Get log likelihood ratio,this is one by term maybe use in odds ratio!!!
+    #set_sum_contrasts()
+    #list_anova <- mclapply(list_mod,function(x){Anova(x,type="III")}, mc.preschedule=FALSE,mc.cores = num_cores) #this value is about 1/2 of deviance
+    #names(list_anova) <- names_mod
+    #LR_Chi_values <- unlist(lapply( list_anova ,function(x){x$`LR Chisq`})) #this value is about 1/2 of deviance
+    #LR_Chi_p_values <- unlist(lapply( list_anova ,function(x){x$`Pr(>Chisq)`})) #this value is about 1/2 of deviance
+    name_list_anova <- file.path(".",paste("list_anova_",region_name[i],"_",out_suffix_s,".RData",sep=""))
+    save(list_anova,file= name_list_anova )
+    
+    #test<-Anova(mod,type="III")
+    #test$`LR Chisq`
+    
+    df_val <- data.frame(mod = names_mod,
+                         AIC=AIC_values,
+                         deviance=res_deviance_values,
+                         loglikelihood=loglikelihood_values,
+                         #LR = LR_Chi_values,
+                         #LR_p=LR_Chi_p_values
+                         n=n_obs)
+    df_val$region <-region_name[i]
+    #df_val$mod <- rownames(df_val)
+    rownames(df_val) <- NULL
+    list_df_val[[i]] <- df_val
+  }
+  
+  df_all <-do.call(rbind,list_df_val)
+  out_filename <- file.path(out_dir,paste("tb_models_summary_accuracy_",out_suffix,".txt",sep=""))
+  write.table(df_all,file=out_filename,sep=",")
+  
+  return(df_all) 
+}
+
 ############### END OF SCRIPT ###################
 
 #http://www.r-bloggers.com/r-code-example-for-neural-networks/

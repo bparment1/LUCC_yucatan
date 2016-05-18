@@ -7,7 +7,7 @@
 #
 #AUTHOR: Benoit Parmentier                                                                #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 04/19/2016
+#DATE MODIFIED: 05/18/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
@@ -45,13 +45,14 @@ library(car)
 
 ###### Functions used in this script
 
-functions_analyses_script <- "analyses_fire_yucatan_functions_04192016b.R" #PARAM 1
+functions_analyses_script <- "analyses_fire_yucatan_functions_05182016.R" #PARAM 1
 script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
 source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
 
 #####  Parameters and argument set up ###########
 
-in_dir<-"/home/bparmentier/Google Drive/FireYuca_2016/"
+in_dir <- "/home/bparmentier/Google Drive/FireYuca_2016/"
+out_dir <- "/home/bparmentier/Google Drive/FireYuca_2016/outputs"
 
 proj_modis_str <-"+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs" #CONST 1
 #CRS_interp <-"+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0" #Station coords WGS84
@@ -62,16 +63,16 @@ CRS_reg <- CRS_WGS84 # PARAM 4
 file_format <- ".rst" #PARAM5
 NA_value <- -9999 #PARAM6
 NA_flag_val <- NA_value #PARAM7
-out_suffix <-"yucatan_CI_analyses_04192016" #output suffix for the files and ouptu folder #PARAM 8
+out_suffix <-"yucatan_CI_analyses_05182016" #output suffix for the files and ouptu folder #PARAM 8
 create_out_dir_param=TRUE #PARAM9
-id_name <- "pointid"
+id_name <- "yucatan_fire_pointid" #Column with the reference point id
 
 state_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/IN_QGIS/State_dis_from_muni.shp"
 #data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.xlsx" #contains the whole dataset
 data_Hansen_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/Hansen_fire.csv" #contains the whole dataset
 
 #data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/yucatan_fire.xlsx" #contains the whole dataset
-data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/yucatan_fire.csv" #contains the whole dataset
+data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/Firedata_05182016.txt" #contains the whole dataset
 
 #data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/old_data/000_GYR_FIRENDVI_2000-9.txt"
 #data_CI_02062016.txt
@@ -87,24 +88,24 @@ list_models<-c("y_var ~ cy_r",
                "y_var ~ cy_r + FIRE_intensity",
                "y_var ~ cy_r + FIRE_bool",
                "y_var ~ cy_r +  
-                      dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+                      dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
                       elevation + slope_deg + landcover + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil",
                "y_var ~ cy_r + FIRE_bool +
-                      dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+                      dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
                       elevation + slope_deg + landcover + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil",
                "y_var ~ cy_r + FIRE_pre07 + 
-                      dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+                      dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
                       elevation + slope_deg + landcover + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil",
                "y_var ~ cy_r + FIRE_intensity + 
-                      dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
+                      dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
                       elevation + slope_deg + landcover + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil",
                "y_var ~ cy_r + FIRE_freq + 
-                      dist_disturbed + dist_loc + dist_rur + dist_urb + dist_roads + 
-                      elevation + slope_deg + landcover + cattledensity + ejido + 
+                      dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
+                      elevation + slotb_models_summary_accuracy_yucatan_CI_analyses_05182016.txtpe_deg + landcover + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil"
 )
 
@@ -114,7 +115,12 @@ list_models<-c("y_var ~ cy_r",
 #set up the working directory
 #Create output directory
 
-out_dir <- in_dir #output will be created in the input dir
+if(is.null(out_dir)){
+  out_dir <- in_dir #output will be created in the input dir
+  
+}
+#out_dir <- in_dir #output will be created in the input dir
+
 out_suffix_s <- out_suffix #can modify name of output suffix
 if(create_out_dir_param==TRUE){
   out_dir <- create_dir_fun(out_dir,out_suffix_s)
@@ -123,18 +129,8 @@ if(create_out_dir_param==TRUE){
   setwd(out_dir) #use previoulsy defined directory
 }
 
-#data_tb <-read.table(data_fname,sep=",",header=T)
-
-#Import data from excel
-#data_Hansen <-read.xls(data_Hansen_fname, sheet=1)
-#data_CI <-read.xls(data_CI_fname, sheet=1)
-#data_Hansen <-read.xls(data_Hansen_fname, sheet=1)
-
-#data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=" ")
 data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
 #data_Hansen <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
-#data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
-#data_df$category <- 1*data_df$FP+2*data_df$NFP+3*data_df$ch
 
 #Create the count variable
 fire_modis_col <- c("FIRE_2000","FIRE_2001","FIRE_2002","FIRE_2003","FIRE_2004","FIRE_2005","FIRE_2006","FIRE_2007")
@@ -232,7 +228,9 @@ region_name <- list_region_name
 test<- generate_summary_tables_from_models(list_model_objects,ref_var,region_name,out_suffix,out_dir)
 
 ### Get accuracy information for models: AIC, deviance, log likelihood, nb of observation etc.
-tb_models_accuracy <- extract_model_metrics_accuracy(list_model_objects,region_name,out_suffix,out_dir)
+#debug(extract_model_metrics_accuracy)
+                                            
+tb_models_accuracy <- extract_model_metrics_accuracy(list_model_objects,region_name,num_cores,out_suffix,out_dir)
 #list_extract_mod_yucatan_CI_analyses_04192016.RData
 
 ## Get odds ratio

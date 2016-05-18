@@ -115,7 +115,7 @@ run_multinom_mod_mc <- function(i,list_param){
   list_mod <- run_multinom_mod(list_models,model_type="multinom",y_var_name,data_df=data_df,ref_var_name=ref_var_name)
   names(list_mod) <- paste("ref_",ref_var_name,sep="")
   ## extract the coefficients from the model and exponentiate
-  exp(coef(test))  
+  #exp(coef(test))  
   #for(i in 1:length(unique_val_y_var)){
   #  ref_var_name <- unique_val_y_var[i]
   #  #debug(run_multinom_mod)
@@ -410,8 +410,8 @@ extract_model_metrics_accuracy <- function(list_model_objects,region_name,num_co
     #names(list_anova) <- names_mod
     #LR_Chi_values <- unlist(lapply( list_anova ,function(x){x$`LR Chisq`})) #this value is about 1/2 of deviance
     #LR_Chi_p_values <- unlist(lapply( list_anova ,function(x){x$`Pr(>Chisq)`})) #this value is about 1/2 of deviance
-    name_list_anova <- file.path(".",paste("list_anova_",region_name[i],"_",out_suffix_s,".RData",sep=""))
-    save(list_anova,file= name_list_anova )
+    #name_list_anova <- file.path(".",paste("list_anova_",region_name[i],"_",out_suffix_s,".RData",sep=""))
+    #save(list_anova,file= name_list_anova )
     
     #test<-Anova(mod,type="III")
     #test$`LR Chisq`
@@ -431,7 +431,7 @@ extract_model_metrics_accuracy <- function(list_model_objects,region_name,num_co
   
   df_all <-do.call(rbind,list_df_val)
   out_filename <- file.path(out_dir,paste("tb_models_summary_accuracy_",out_suffix,".txt",sep=""))
-  write.table(df_all,file=out_filename,sep=",")
+  write.table(df_all,file=out_filename,sep=",",row.names = F)
   
   return(df_all) 
 }

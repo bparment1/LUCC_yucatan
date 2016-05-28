@@ -6,7 +6,7 @@
 #
 #AUTHOR: Benoit Parmentier                                                                    #
 #DATE CREATED: 02/12/2016 
-#DATE MODIFIED: 04/19/2016
+#DATE MODIFIED: 05/28/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones
 #   
@@ -209,8 +209,10 @@ extract_multinom_mod_information <- function(mod){
   AIC_values <- unlist(lapply(list_mod,function(x){x$AIC}))
   names(AIC_values) <- names_mod
   list_coef <- lapply(list_mod,function(x){summary(x)$coefficients})
+  names(list_coef) <- names_mod
   #adding extraction of odds ratio
   list_odds <- lapply(list_mod,function(x){exp(coef(x))})
+  names(list_odds) <- names_mod
   #list_formulas <- lapply(list_mod,function(x){summary(x)$formula})
   list_extract_coef_p_values <- lapply(list_mod,FUN=extract_coef_p_values)
   names(list_extract_coef_p_values) <- names_mod
@@ -256,9 +258,9 @@ create_summary_tables_reg_multinom <- function(list_extract_mod,reg_param,ref_va
 
 produce_regression_parameter_table <- function(reg_param,extract_mod,ref_var_tmp,list_models,region_name){
   #This function reorganizes parameters extracted from multinom.
-  #Parameters are, p, z, coefficients and standard errors.
+  #Parameters are, p, z, coefficients and standard errors and odds
   #Inputs:
-  #1)reg_param <- regression parameters, p, z, coeff, stand errors 
+  #1)reg_param <- regression parameters, p, z, coeff, standard errors, odds 
   #2)extract_mod <- extact object from function extract
   #3)ref_var_tmp: value for the reference variable, in this context 1,2,3
   #4)list_models: model formulas as string/char
@@ -268,7 +270,14 @@ produce_regression_parameter_table <- function(reg_param,extract_mod,ref_var_tmp
   list_df_tmp <- vector("list",length=length(list_models))
   #loop through models...
   for(i in 1:length(list_models)){
-    df_tmp <- as.data.frame((extract_mod[[i]][[reg_param]])) #e.g. p variable
+    if(reg_param=="odds"){
+      reg_param_tmp <- "summary_coefficients"
+      df_tmp <- as.data.frame((extract_mod[[i]][[reg_param_tmp]])) #e.g. p variable
+      df_tmp <- exp(df_tmp)
+    }else{
+      df_tmp <- as.data.frame((extract_mod[[i]][[reg_param]])) #e.g. p variable
+    }
+
     df_tmp$ref_eqt <- rownames(df_tmp)
     df_tmp$ref_var <- ref_var_tmp
     df_tmp$mod_name <- paste("mod",i,sep="")
@@ -312,6 +321,8 @@ generate_summary_tables_from_models <- function(list_models_objects,ref_var,regi
     #Reading object files produced earlier:
     model_obj <- load_obj(list_model_objects[[i]]) #ref 1 for overall model?
     #undebug(extract_multinom_mod_information)
+    #test2 <- extract_multinom_mod_information(model_obj[[1]])
+    #
     list_extract_mod[[i]] <- lapply(model_obj,FUN=extract_multinom_mod_information)
   }
   list_extract_mod_fname <- paste("list_extract_mod_",out_suffix_s,".RData",sep="")
@@ -319,8 +330,10 @@ generate_summary_tables_from_models <- function(list_models_objects,ref_var,regi
   #test <- extract_multinom_mod_information(model_obj[[1]])#ref 1
   
   names(list_extract_mod[[1]][[1]]) #
-  #> names(list_extrat_mod[[1]][[1]])
+   
+  #names(list_extract_mod[[1]][[1]]) #
   #[1] "AIC_values"                 "list_coef"                  "list_extract_coef_p_values"
+  #[4] "list_odds" 
   
   #list_extract_mod <- list_extrat_mod
   
@@ -345,12 +358,21 @@ generate_summary_tables_from_models <- function(list_models_objects,ref_var,regi
   reg_param<- "z"
   tb_summary_z <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
   
+  ###Now extract odds
+  #reg_param <- "odds"
+  #(list_extract_mod[[1]][[2]])$list_odds
+  #lapply(list_extract_mod,Fun=)
+  #(list_extract_mod[[1]][[1]])$list_odds
+  reg_param <- "odds"
+  tb_summary_odds <- create_summary_tables_reg_multinom(list_extract_mod,reg_param,ref_var,list_region_name,list_models)
+  
   ##Collapse tables for each region
   
   list_tb_summary_p <- lapply(tb_summary_p, function(x){do.call(rbind,x)}) #equal to region's length
   list_tb_summary_coef <- lapply(tb_summary_coef, function(x){do.call(rbind,x)})
   list_tb_summary_std_errors <- lapply(tb_summary_std_errors, function(x){do.call(rbind,x)})
   list_tb_summary_z <- lapply(tb_summary_z, function(x){do.call(rbind,x)})
+  list_tb_summary_odds <- lapply(tb_summary_odds, function(x){do.call(rbind,x)})
   
   list_out_suffix_s <- paste(region_name,out_suffix_s,sep="_")
   
@@ -363,8 +385,13 @@ generate_summary_tables_from_models <- function(list_models_objects,ref_var,regi
   out_filename <- file.path(out_dir,paste("tb_summary_z_",list_out_suffix_s,".txt",sep=""))
   out_filename_summary_z <- lapply(1:length(list_tb_summary_z),FUN=write_table_fun,list_tb_summary=list_tb_summary_z,out_filename=out_filename)
   
+  out_filename <- file.path(out_dir,paste("tb_summary_odds_",list_out_suffix_s,".txt",sep=""))
+  out_filename_summary_odds <- lapply(1:length(list_tb_summary_odds),FUN=write_table_fun,list_tb_summary=list_tb_summary_odds,out_filename=out_filename)
   
-  list_out_filename <- list(out_filename_summary_p,out_filename_summary_coef,out_filename_summary_std_errors,out_filename_summary_z)
+  ###### Prepare output object
+
+  list_out_filename <- list(out_filename_summary_p,out_filename_summary_coef,out_filename_summary_std_errors,
+                            out_filename_summary_z,out_filename_summary_odds)
   list_out_filename <- unlist(list_out_filename)
   
   ##Now gather AIC and 

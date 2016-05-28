@@ -7,7 +7,7 @@
 #
 #AUTHOR: Benoit Parmentier                                                                #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 05/18/2016
+#DATE MODIFIED: 05/28/2016
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
@@ -45,7 +45,7 @@ library(car)
 
 ###### Functions used in this script
 
-functions_analyses_script <- "analyses_fire_yucatan_functions_05182016.R" #PARAM 1
+functions_analyses_script <- "analyses_fire_yucatan_functions_05282016.R" #PARAM 1
 script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
 source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
 
@@ -63,7 +63,7 @@ CRS_reg <- CRS_WGS84 # PARAM 4
 file_format <- ".rst" #PARAM5
 NA_value <- -9999 #PARAM6
 NA_flag_val <- NA_value #PARAM7
-out_suffix <-"yucatan_CI_analyses_05182016" #output suffix for the files and ouptu folder #PARAM 8
+out_suffix <-"yucatan_CI_analyses_05292016" #output suffix for the files and ouptu folder #PARAM 8
 create_out_dir_param=TRUE #PARAM9
 id_name <- "yucatan_fire_pointid" #Column with the reference point id
 
@@ -105,7 +105,7 @@ list_models<-c("y_var ~ cy_r",
                       popdens_change + precip + protegidas + soil",
                "y_var ~ cy_r + FIRE_freq + 
                       dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
-                      elevation + slotb_models_summary_accuracy_yucatan_CI_analyses_05182016.txtpe_deg + landcover + cattledensity + ejido + 
+                      elevation + slope_deg + landcover + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil"
 )
 
@@ -225,7 +225,7 @@ region_name <- list_region_name
 
 ### Make this part a function:
 #debug(generate_summary_tables_from_models)
-test<- generate_summary_tables_from_models(list_model_objects,ref_var,region_name,out_suffix,out_dir)
+test <- generate_summary_tables_from_models(list_model_objects,ref_var,region_name,out_suffix,out_dir)
 
 ### Get accuracy information for models: AIC, deviance, log likelihood, nb of observation etc.
 #debug(extract_model_metrics_accuracy)
@@ -234,9 +234,6 @@ tb_models_accuracy <- extract_model_metrics_accuracy(list_model_objects,region_n
 #list_extract_mod_yucatan_CI_analyses_04192016.RData
 
 ## Get odds ratio
-
-
-
 
 #### Add extraction of fitted values and residuals??
 

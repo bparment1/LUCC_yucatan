@@ -188,8 +188,73 @@ out_suffix_s <- paste("overall_",out_suffix,sep="")
 #debug(multinomial_model_fun)
 anthromes_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/gl_anthrome.tif"
 #anthropogenic_biome_legend.csv
-r_anthromes <- raster(anthromes_filename)
-
+#anthromes_legend_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/anthropogenic_biome_legend.csv"
+anthromes_legend_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/anthromes_legend.csv"
+df_anthromes_legend <- read.table(anthromes_legend_filename,sep=",",header=T)
 plot(r_anthromes)
 
+cat_names <- df_anthromes_legend$LABEL
+
+plot(r_anthromes)
+res_pix<-960
+col_mfrow<-1
+row_mfrow<-1
+png(filename=paste("Figure1_paper1_wwf_ecoreg_Alaska",out_prefix,".png",sep=""),
+    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
+#par(mfrow=c(1,2))
+nb_col <- length(cat_names)
+col_anth<-rainbow(nb_col)
+#col_eco[16]<-"brown"
+#col_eco[11]<-"darkgreen"
+#col_eco[7]<-"lightblue"
+#col_eco[6]<-"grey"
+#col_eco[12]<-"yellowgreen"
+X11()
+plot(r_anthromes,col=col_anth,legend=FALSE,axes="FALSE")
+legend("topright",legend=cat_names,title="Anthromes",
+       pt.cex=1.1,cex=1.1,fill=col_anth,bty="n")
+#scale_position<-c(450000, 600000)
+#arrow_position<-c(900000, 600000)
+
+#### Crop to the region of interest
+
+ref_e <- extent(reg_ref_rast) #extract extent from raster object
+ref_e <- extent(data_df_spdf) #extract extent from raster object
+reg_outline_poly <- as(ref_e, "SpatialPolygons") #coerce raster extent object to SpatialPolygons from sp package 
+reg_outline_poly <- as(reg_outline_poly, "SpatialPolygonsDataFrame") #promote to spdf
+proj4string(reg_outline_poly) <- proj4string(data_df_spdf) #Assign projection to spdf
+
+r_NDVI <- raster("/home/bparmentier/Google Drive/Space_beats_time/data_yucatan_NDVI/r_NDVI_271_EDGY_11142015.rst")
+r_state <- raster("/home/bparmentier/Google Drive/FireYuca_2016/Statemuni.tif")
+r_Fire08 <- raster("/home/bparmentier/Google Drive/FireYuca_2016/Fire08.tif")
+reg_outline_poly_WGS84 <- spTransform(reg_outline_poly,CRS(projection(r_anthromes)))
+r_test <- crop(r_anthromes,reg_outline_poly_WGS84)
+infile_reg_outline <- paste("reg_out_line_",out_suffix,".shp",sep="") #name of newly crated shapefile with the extent
+writeOGR(reg_outline_poly,dsn= outDir,layer= sub(".shp","",infile_reg_outline), 
+         driver="ESRI Shapefile",overwrite_layer="TRUE")
+
+data_df_spg <- data_spdf_CRS_WGS84 
+gridded(data_df_spg) = TRUE
+
+data_spdf_CRS_WGS84 <- spTransform(data_df_spdf,CRS_WGS84)
+writeOGR(data_spdf_CRS_WGS84,"data_spdf_CRS_WGS84")
+
+outfile<-paste("data_spdf_CRS_WGS84_",out_suffix,sep="")
+writeOGR(data_spdf_CRS_WGS84 ,dsn= ".",layer= outfile, driver="ESRI Shapefile",overwrite_layer=TRUE)
+
+# proj4string(data_df_spdf)
+#[1] "+proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
+#spTransform(data_df_spdf)
+#r_anthromes_yucatan <- crop(r_anthromes,data_df_spdf)
+
+r_anthromes_yucatan <- raster("/home/bparmentier/Google Drive/FireYuca_2016/datasets/yucatan_window_anthromes.tif")
+
+#data_df$FIRE_freq 
+#rasterize using sum?
+r_test <- rasterize(data_spdf_CRS_WGS84,y=r_anthromes_yucatan,field="FIRE_freq",fun=sum)
+range(r_test)
+plot(table(as.vector(r_test)),type="h")
+table(as.vector(r_test))
+
+plot(r_test)
 ############### END OF SCRIPT ###################

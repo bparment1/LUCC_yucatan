@@ -191,30 +191,8 @@ anthromes_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-
 #anthromes_legend_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/anthropogenic_biome_legend.csv"
 anthromes_legend_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/anthromes_legend.csv"
 df_anthromes_legend <- read.table(anthromes_legend_filename,sep=",",header=T)
-plot(r_anthromes)
+#plot(r_anthromes)
 
-cat_names <- df_anthromes_legend$LABEL
-
-plot(r_anthromes)
-res_pix<-960
-col_mfrow<-1
-row_mfrow<-1
-png(filename=paste("Figure1_paper1_wwf_ecoreg_Alaska",out_prefix,".png",sep=""),
-    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
-#par(mfrow=c(1,2))
-nb_col <- length(cat_names)
-col_anth<-rainbow(nb_col)
-#col_eco[16]<-"brown"
-#col_eco[11]<-"darkgreen"
-#col_eco[7]<-"lightblue"
-#col_eco[6]<-"grey"
-#col_eco[12]<-"yellowgreen"
-X11()
-plot(r_anthromes,col=col_anth,legend=FALSE,axes="FALSE")
-legend("topright",legend=cat_names,title="Anthromes",
-       pt.cex=1.1,cex=1.1,fill=col_anth,bty="n")
-#scale_position<-c(450000, 600000)
-#arrow_position<-c(900000, 600000)
 
 #### Crop to the region of interest
 
@@ -233,8 +211,8 @@ infile_reg_outline <- paste("reg_out_line_",out_suffix,".shp",sep="") #name of n
 writeOGR(reg_outline_poly,dsn= outDir,layer= sub(".shp","",infile_reg_outline), 
          driver="ESRI Shapefile",overwrite_layer="TRUE")
 
-data_df_spg <- data_spdf_CRS_WGS84 
-gridded(data_df_spg) = TRUE
+#data_df_spg <- data_spdf_CRS_WGS84 
+#gridded(data_df_spg) = TRUE
 
 data_spdf_CRS_WGS84 <- spTransform(data_df_spdf,CRS_WGS84)
 writeOGR(data_spdf_CRS_WGS84,"data_spdf_CRS_WGS84")
@@ -260,6 +238,29 @@ df_fire_anthromes <- extract(r_test,r_anthromes_yucatan)
 tb <- crosstab(r_test,r_anthromes_yucatan)
 r_c <-stack(r_anthromes_yucatan,r_test)
 
+cat_names <- df_anthromes_legend$LABEL
+
+plot(r_anthromes_yucatan)
+res_pix<-960
+col_mfrow<-1
+row_mfrow<-1
+png(filename=paste("Figure1_paper1_wwf_ecoreg_Alaska",out_prefix,".png",sep=""),
+    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
+#par(mfrow=c(1,2))
+nb_col <- length(cat_names)
+col_anth<-rainbow(nb_col)
+#col_eco[16]<-"brown"
+#col_eco[11]<-"darkgreen"
+#col_eco[7]<-"lightblue"
+#col_eco[6]<-"grey"
+#col_eco[12]<-"yellowgreen"
+#X11()
+plot(r_anthromes_yucatan,col=col_anth,legend=FALSE,axes="FALSE")
+legend("topleft",legend=cat_names,title="Anthromes",
+       pt.cex=1.1,cex=1.1,fill=col_anth,bty="n")
+#scale_position<-c(450000, 600000)
+#arrow_position<-c(900000, 600000)
+
 df_r_c <- as.data.frame(r_c)
 names(df_r_c) <- c("cat","fire_count")
 freq(r_anthromes_yucatan)
@@ -271,7 +272,22 @@ df_combined <- merge(df_cat_mean,df_anthromes_legend,by.x="cat",by.y="Grid.Value
 barplot(df_combined$fire_count,names.arg=df_combined$LABEL,anble="90",las=2)
 barplot(df_combined$fire_count,names.arg=df_combined$LABEL,anble="90",las=2,horiz=T)
 
-lm_fire <-lm(fire_count~cat,df_r_c)
+lm_fire <-lm(log(fire_count)~cat,df_r_c)
+
+df_r_c$anth_cat <- as.factor(df_r_c$cat)
+lm_fire2 <- lm(fire_count ~ anth_cat,df_r_c)
+summary(lm_fire2)
+
+lm_fireby_group <- lm(fire_count ~ anth_cat,df_r_c)
+summary(lm_fire2)
+
+histogram(log(df_r_c$fire_count))
+df_r_c$log_fire <- log(df_r_c$fire_count)
+hist(df_r_c$fire_count)
+
+boxplot(fire_count~cat, df_r_c, outline=F,names=df_anthromes_legend$LABEL)
+boxplot(log_fire~cat, df_r_c, outline=F)
+        ,names=df_anthromes_legend$LABEL)
 
 # SEVERITY AT THE POLYGON LEVEL: ANALYSIS FOR PAPER
 

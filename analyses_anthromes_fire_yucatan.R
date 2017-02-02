@@ -256,5 +256,38 @@ range(r_test)
 plot(table(as.vector(r_test)),type="h")
 table(as.vector(r_test))
 
-plot(r_test)
+df_fire_anthromes <- extract(r_test,r_anthromes_yucatan)
+tb <- crosstab(r_test,r_anthromes_yucatan)
+r_c <-stack(r_anthromes_yucatan,r_test)
+
+df_r_c <- as.data.frame(r_c)
+names(df_r_c) <- c("cat","fire_count")
+freq(r_anthromes_yucatan)
+
+data.frame()
+df_cat_mean <- aggregate(fire_count ~ cat, df_r_c, mean)
+df_anthromes_legend
+df_combined <- merge(df_cat_mean,df_anthromes_legend,by.x="cat",by.y="Grid.Value")
+barplot(df_combined$fire_count,names.arg=df_combined$LABEL,anble="90",las=2)
+barplot(df_combined$fire_count,names.arg=df_combined$LABEL,anble="90",las=2,horiz=T)
+
+lm_fire <-lm(fire_count~cat,df_r_c)
+
+# SEVERITY AT THE POLYGON LEVEL: ANALYSIS FOR PAPER
+
+mean_Pol_Severity_PC1<-tapply(data_pol$Pol_PC1, data_pol$Pol_Severity, mean, na.rm=TRUE)
+x<- mean_Pol_Severity_PC1[1:2]
+#X11(width=55,height=45)
+
+plot(c(0,1), x, xlim=c(-.2, 1.2), ylim=c(-.4,1), type="l", axes=FALSE,
+     col="red", xlab="BOOLEAN SEVERITY", ylab="MEAN PC1 SCORES")
+points(c(0,1), x, pch=1)
+axis(1, at=c(0,1)) # "1' for side=below, the axis is drawned  on the right at location 0 and 1
+axis(2,las=1 ) # Draw axis on the left, with labels oriented perdendicular to axis.
+box()    #This draws a box...
+
+savePlot(paste("Boolean_burnt_severity_",out_prefix,".tiff", sep=""), type="tiff")
+tiff(filename=paste(path,"Boolean_burnt_severity_t_",out_prefix,".tiff", sep=""))
+##Look at the association between fire count in cat
+
 ############### END OF SCRIPT ###################

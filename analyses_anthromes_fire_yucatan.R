@@ -285,17 +285,31 @@ df_cat_mean <- aggregate(fire_count ~ cat, df_r_c, mean)
 df_anthromes_legend
 df_anth_cat_combined <- merge(df_cat_mean,df_anthromes_legend,by.x="cat",by.y="Grid.Value")
 View(df_anth_cat_combined)
-df_anth_
+
 barplot(df_combined$fire_count,names.arg=df_combined$LABEL,anble="90",las=2)
 barplot(df_combined$fire_count,names.arg=df_combined$LABEL,angle="90",las=2,horiz=T)
+boxplot(fire_count~anth_group, df_r_c, outline=F)
+
+boxplot(log_fire~cat, df_r_c, outline=F)
+#,names=df_anthromes_legend$LABEL)
 
 ##############################
 #### Try Poisson regression ###
 
+df_r_c_all <- df_r_c
+#df_r_c <- df_r_c_all
+df_r_c <- df_r_c[!is.na(df_r_c$fire_count),]
+
+sum(is.na(df_r_c$GROUP))
+
 glm_fire <- glm(fire_count~cat,family="poisson",data=df_r_c)
 glm_fire_anth_cat <- glm(fire_count~anth_cat,family="poisson",data=df_r_c)
 
-glm_fire_anth_cat <- glm(fire_count~anth_cat,family="poisson",data=df_r_c)
+glm_fire_anth_group <- glm(fire_count~anth_group,family="poisson",data=df_r_c)
+summary(glm_fire_anth_group)
+
+df_r_c$fire_count
+unique(df_r_c$anth_group)
 
 #Poisson regression:
 #https://onlinecourses.science.psu.edu/stat504/book/export/html/165
@@ -303,8 +317,8 @@ glm_fire_anth_cat <- glm(fire_count~anth_cat,family="poisson",data=df_r_c)
 #https://onlinecourses.science.psu.edu/stat504/node/169
 
 
-lm_fire2 <- lm(fire_count ~ anth_cat,df_r_c)
-summary(lm_fire2)
+lm_fire_anth_cat <- lm(fire_count ~ anth_cat,df_r_c)
+summary(lm_fire_anth_cat)
 
 lm_fireby_group <- lm(fire_count ~ anth_cat,df_r_c)
 summary(lm_fire2)
@@ -313,13 +327,32 @@ histogram(log(df_r_c$fire_count))
 df_r_c$log_fire <- log(df_r_c$fire_count)
 hist(df_r_c$fire_count)
 
-boxplot(fire_count~cat, df_r_c, outline=F,names=df_anthromes_legend$LABEL)
-boxplot(log_fire~cat, df_r_c, outline=F)
-#,names=df_anthromes_legend$LABEL)
 
 #> unique(df_r_c$cat)
 #[1] NA 52 43 62 51 34 32 26 12 41 42 31 11 24 35 33 61 25
 #> length(unique(df_r_c$cat))
+
+#### Check for over dispersion
+#Aslo do Tukey comparison
+#http://www.ats.ucla.edu/stat/r/dae/nbreg.htm
+#http://stats.stackexchange.com/questions/71961/understanding-over-dispersion-as-it-relates-to-the-poisson-and-the-neg-binomial
+#R> library(AER)
+#R> data(RecreationDemand)
+#R> rd <- glm(trips ~ ., data = RecreationDemand, family = poisson)
+#R> dispersiontest(rd,trafo=1)
+
+#Overdispersion test
+
+#with(dat, tapply(daysabs, prog, function(x) {
+#  sprintf("M (SD) = %1.2f (%1.2f)", mean(x), sd(x))
+#}))
+library(MASS)
+#Use the glm.nb from the MASS package to run the negative bionomial model
+glm_nb_anth_group <- glm.nb(fire_count ~ anth_group, data = df_r_c)
+glm_nb_anth_cat <- glm.nb(fire_count ~ anth_cat, data = df_r_c)
+
+glm_fire <- glm(fire_count~cat,family="poisson",data=df_r_c)
+glm_fire_anth_cat <- glm(fire_count~anth_cat,family="poisson",data=df_r_c)
 
 ############### END OF SCRIPT ###################
 

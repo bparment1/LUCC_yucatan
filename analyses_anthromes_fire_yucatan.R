@@ -193,7 +193,6 @@ anthromes_legend_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datas
 df_anthromes_legend <- read.table(anthromes_legend_filename,sep=",",header=T)
 #plot(r_anthromes)
 
-
 #### Crop to the region of interest
 
 ref_e <- extent(reg_ref_rast) #extract extent from raster object
@@ -229,23 +228,28 @@ r_anthromes_yucatan <- raster("/home/bparmentier/Google Drive/FireYuca_2016/data
 
 #data_df$FIRE_freq 
 #rasterize using sum?
-r_test <- rasterize(data_spdf_CRS_WGS84,y=r_anthromes_yucatan,field="FIRE_freq",fun=sum)
-range(r_test)
-plot(table(as.vector(r_test)),type="h")
-table(as.vector(r_test))
+r_fire_freq <- rasterize(data_spdf_CRS_WGS84,y=r_anthromes_yucatan,field="FIRE_freq",fun=sum)
+range(r_fire_freq)
 
-df_fire_anthromes <- extract(r_test,r_anthromes_yucatan)
+plot(table(as.vector(r_fire_freq)),type="h",
+     ylab="Frequency of Fire Freq values in 10km2 pixels",xlab="Fire freq value")
+
+plot(table(as.vector(r_fire_freq)),type="h",
+     ylab="Frequency of Fire Freq values in 10km2 pixels",xlab="Fire freq value",
+     xlim=c(0,500))
+table(as.vector(r_fire_freq))
+
+df_fire_anthromes <- extract(r_fire_freq,r_anthromes_yucatan)
 tb <- crosstab(r_test,r_anthromes_yucatan)
 r_c <-stack(r_anthromes_yucatan,r_test)
 
 cat_names <- df_anthromes_legend$LABEL
 
-plot(r_anthromes_yucatan)
 res_pix<-960
 col_mfrow<-1
 row_mfrow<-1
-png(filename=paste("Figure1_paper1_wwf_ecoreg_Alaska",out_prefix,".png",sep=""),
-    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
+#png(filename=paste("Figure1_paper1_wwf_ecoreg_Alaska",out_prefix,".png",sep=""),
+#    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
 #par(mfrow=c(1,2))
 nb_col <- length(cat_names)
 col_anth<-rainbow(nb_col)
@@ -254,27 +258,51 @@ col_anth<-rainbow(nb_col)
 #col_eco[7]<-"lightblue"
 #col_eco[6]<-"grey"
 #col_eco[12]<-"yellowgreen"
-#X11()
+X11()
 plot(r_anthromes_yucatan,col=col_anth,legend=FALSE,axes="FALSE")
 legend("topleft",legend=cat_names,title="Anthromes",
        pt.cex=1.1,cex=1.1,fill=col_anth,bty="n")
 #scale_position<-c(450000, 600000)
 #arrow_position<-c(900000, 600000)
+#dev.off()
+
+plot(r_fire_freq,main="Fire frequency count over 2001-2008")
+
+############## Model the relationship ########
 
 df_r_c <- as.data.frame(r_c)
 names(df_r_c) <- c("cat","fire_count")
+
+df_r_c <- merge(df_r_c ,df_anthromes_legend,by.x="cat",by.y="Grid.Value")
+dim(df_r_c) #2191x4
+
 freq(r_anthromes_yucatan)
 
-data.frame()
+df_r_c$anth_cat <- as.factor(df_r_c$LABEL)
+df_r_c$anth_group <-  as.factor(df_r_c$GROUP)
+
 df_cat_mean <- aggregate(fire_count ~ cat, df_r_c, mean)
 df_anthromes_legend
-df_combined <- merge(df_cat_mean,df_anthromes_legend,by.x="cat",by.y="Grid.Value")
+df_anth_cat_combined <- merge(df_cat_mean,df_anthromes_legend,by.x="cat",by.y="Grid.Value")
+View(df_anth_cat_combined)
+df_anth_
 barplot(df_combined$fire_count,names.arg=df_combined$LABEL,anble="90",las=2)
-barplot(df_combined$fire_count,names.arg=df_combined$LABEL,anble="90",las=2,horiz=T)
+barplot(df_combined$fire_count,names.arg=df_combined$LABEL,angle="90",las=2,horiz=T)
 
-lm_fire <-lm(log(fire_count)~cat,df_r_c)
+##############################
+#### Try Poisson regression ###
 
-df_r_c$anth_cat <- as.factor(df_r_c$cat)
+glm_fire <- glm(fire_count~cat,family="poisson",data=df_r_c)
+glm_fire_anth_cat <- glm(fire_count~anth_cat,family="poisson",data=df_r_c)
+
+glm_fire_anth_cat <- glm(fire_count~anth_cat,family="poisson",data=df_r_c)
+
+#Poisson regression:
+#https://onlinecourses.science.psu.edu/stat504/book/export/html/165
+#http://www.ats.ucla.edu/stat/r/dae/poissonreg.htm
+#https://onlinecourses.science.psu.edu/stat504/node/169
+
+
 lm_fire2 <- lm(fire_count ~ anth_cat,df_r_c)
 summary(lm_fire2)
 
@@ -287,23 +315,27 @@ hist(df_r_c$fire_count)
 
 boxplot(fire_count~cat, df_r_c, outline=F,names=df_anthromes_legend$LABEL)
 boxplot(log_fire~cat, df_r_c, outline=F)
-        ,names=df_anthromes_legend$LABEL)
+#,names=df_anthromes_legend$LABEL)
+
+#> unique(df_r_c$cat)
+#[1] NA 52 43 62 51 34 32 26 12 41 42 31 11 24 35 33 61 25
+#> length(unique(df_r_c$cat))
+
+############### END OF SCRIPT ###################
 
 # SEVERITY AT THE POLYGON LEVEL: ANALYSIS FOR PAPER
 
-mean_Pol_Severity_PC1<-tapply(data_pol$Pol_PC1, data_pol$Pol_Severity, mean, na.rm=TRUE)
-x<- mean_Pol_Severity_PC1[1:2]
-#X11(width=55,height=45)
-
-plot(c(0,1), x, xlim=c(-.2, 1.2), ylim=c(-.4,1), type="l", axes=FALSE,
-     col="red", xlab="BOOLEAN SEVERITY", ylab="MEAN PC1 SCORES")
-points(c(0,1), x, pch=1)
-axis(1, at=c(0,1)) # "1' for side=below, the axis is drawned  on the right at location 0 and 1
-axis(2,las=1 ) # Draw axis on the left, with labels oriented perdendicular to axis.
-box()    #This draws a box...
-
-savePlot(paste("Boolean_burnt_severity_",out_prefix,".tiff", sep=""), type="tiff")
-tiff(filename=paste(path,"Boolean_burnt_severity_t_",out_prefix,".tiff", sep=""))
-##Look at the association between fire count in cat
-
-############### END OF SCRIPT ###################
+# mean_Pol_Severity_PC1<-tapply(data_pol$Pol_PC1, data_pol$Pol_Severity, mean, na.rm=TRUE)
+# x<- mean_Pol_Severity_PC1[1:2]
+# #X11(width=55,height=45)
+# 
+# plot(c(0,1), x, xlim=c(-.2, 1.2), ylim=c(-.4,1), type="l", axes=FALSE,
+#      col="red", xlab="BOOLEAN SEVERITY", ylab="MEAN PC1 SCORES")
+# points(c(0,1), x, pch=1)
+# axis(1, at=c(0,1)) # "1' for side=below, the axis is drawned  on the right at location 0 and 1
+# axis(2,las=1 ) # Draw axis on the left, with labels oriented perdendicular to axis.
+# box()    #This draws a box...
+# 
+# savePlot(paste("Boolean_burnt_severity_",out_prefix,".tiff", sep=""), type="tiff")
+# tiff(filename=paste(path,"Boolean_burnt_severity_t_",out_prefix,".tiff", sep=""))
+# ##Look at the association between fire count in cat

@@ -42,6 +42,8 @@ library(plyr)
 library(rgeos)                           # topology and vector spatial queries and operations
 library(afex)                            # functions related to ANOVA
 library(car)
+library(MASS)                            # contains negative binomial model
+library(multcomp)                        # has Tukey comparison
 
 ###### Functions used in this script
 
@@ -232,7 +234,6 @@ r_anthromes_yucatan <- raster("/home/bparmentier/Google Drive/FireYuca_2016/data
 #rasterize using sum?
 r_fire_freq <- rasterize(data_spdf_CRS_WGS84,y=r_anthromes_yucatan,field="FIRE_freq",fun=sum)
 
-
 plot(table(as.vector(r_fire_freq)),type="h",
      ylab="Frequency of Fire Freq values in 10km2 pixels",xlab="Fire freq value")
 
@@ -359,7 +360,6 @@ histogram(log(df_r_c$fire_count))
 df_r_c$log_fire <- log(df_r_c$fire_count)
 hist(df_r_c$fire_count)
 
-
 #> unique(df_r_c$cat)
 #[1] NA 52 43 62 51 34 32 26 12 41 42 31 11 24 35 33 61 25
 #> length(unique(df_r_c$cat))
@@ -379,11 +379,15 @@ hist(df_r_c$fire_count)
 #  sprintf("M (SD) = %1.2f (%1.2f)", mean(x), sd(x))
 #}))
 #http://www.ats.ucla.edu/stat/r/dae/nbreg.htm
-library(MASS)
 #Use the glm.nb from the MASS package to run the negative bionomial model
-glm_nb_anth_group <- glm.nb(fire_count ~ anth_group, data = df_r_c)
-glm_nb_anth_cat <- glm.nb(fire_count ~ anth_cat, data = df_r_c)
+glm_nb_fire_anth_group <- glm.nb(fire_count ~ anth_group, data = df_r_c)
+glm_nb_fire_anth_cat <- glm.nb(fire_count ~ anth_cat, data = df_r_c)
 
+agg_anth_group <- aggregate(fire_count ~anth_group,data = df_r_c,mean)
+agg_anth_group$var <- (aggregate(fire_count ~anth_group,data = df_r_c,var))$fire_count
+names(agg_anth_group) <- c("anth_group","mean","var")
+
+View(agg_anth_group)
 
 X2 <- 2 * (logLik(glm_nb_anth_group ) - logLik(glm_fire_anth_group))
 X2
@@ -391,24 +395,17 @@ X2
 pchisq(X2, df = 1, lower.tail=FALSE)
 #'log Lik.' 0 (df=8)
 
-glm_nb_anth_group$theta
+glm_nb_fire_anth_group$theta
 
+#summary(anova(glm_nb_anth_group,test="LRT"))
+
+comp_tukey_glm_fire_anth_group <- glht(glm_fire_anth_group,mcp(anth_group='Tukey'))
+
+summary(comp_tukey_glm_fire_anth_group)
+
+comp_tukey_glm_nb_fire_anth_group <- glht(glm_nb_fire_anth_group,mcp(anth_group='Tukey'))
+
+summary(comp_tukey_glm_nb_fire_anth_group)
 
 ############### END OF SCRIPT ###################
 
-# SEVERITY AT THE POLYGON LEVEL: ANALYSIS FOR PAPER
-
-# mean_Pol_Severity_PC1<-tapply(data_pol$Pol_PC1, data_pol$Pol_Severity, mean, na.rm=TRUE)
-# x<- mean_Pol_Severity_PC1[1:2]
-# #X11(width=55,height=45)
-# 
-# plot(c(0,1), x, xlim=c(-.2, 1.2), ylim=c(-.4,1), type="l", axes=FALSE,
-#      col="red", xlab="BOOLEAN SEVERITY", ylab="MEAN PC1 SCORES")
-# points(c(0,1), x, pch=1)
-# axis(1, at=c(0,1)) # "1' for side=below, the axis is drawned  on the right at location 0 and 1
-# axis(2,las=1 ) # Draw axis on the left, with labels oriented perdendicular to axis.
-# box()    #This draws a box...
-# 
-# savePlot(paste("Boolean_burnt_severity_",out_prefix,".tiff", sep=""), type="tiff")
-# tiff(filename=paste(path,"Boolean_burnt_severity_t_",out_prefix,".tiff", sep=""))
-# ##Look at the association between fire count in cat

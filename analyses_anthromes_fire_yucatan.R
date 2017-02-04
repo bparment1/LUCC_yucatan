@@ -11,7 +11,7 @@
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
-#COMMIT: Fix inputs issues in cropland classes and rerunning glm models for Yucatan 
+#COMMIT: run glm model for anthromes categories within croplands 
 #TODO:
 
 #################################################################################################
@@ -283,6 +283,8 @@ r_group_anthromes_yucatan <- r_anthromes_yucatan
 df_subs <- subset(df_freq,select=c("value","group_val"))
 r_group_anthromes_yucatan <- subs(x=r_group_anthromes_yucatan,y=df_subs)
 
+r_group_anthromes_yucatan_filename <- file.path(out_dir,paste0("r_group_anthromes_yucatan","_",out_suffix,".tif")
+writeRaster(r_group_anthromes_yucatan,"")
 col_group <- c("dark grey","dark blue","yellowgreen","brown","darkgreen","darkorange")
 
 plot(r_group_anthromes_yucatan,col=col_group,legend=FALSE,axes="FALSE")
@@ -404,8 +406,38 @@ comp_tukey_glm_fire_anth_group <- glht(glm_fire_anth_group,mcp(anth_group='Tukey
 summary(comp_tukey_glm_fire_anth_group)
 
 comp_tukey_glm_nb_fire_anth_group <- glht(glm_nb_fire_anth_group,mcp(anth_group='Tukey'))
-
+comp_tukey_glm_nb_fire_anth_group
 summary(comp_tukey_glm_nb_fire_anth_group)
+
+##### Now do model for cropland classes
+
+df_r_c_subset <- subset(df_r_c,anth_group==("Croplands"))
+df_r_c_subset$anth_cat <- as.character(df_r_c_subset$anth_cat)
+df_r_c_subset$anth_cat <- as.factor(df_r_c_subset$anth_cat)
+table(df_r_c_subset$anth_cat)
+
+boxplot(fire_count ~ anth_cat,data=df_r_c_subset,outline=F)
+
+glm_nb_fire_croplands_anth_cat <- glm.nb(fire_count ~ anth_cat, data = df_r_c_subset)
+summary(glm_nb_fire_croplands_anth_cat)
+
+comp_tukey_glm_nb_fire_croplands_anth_cat<- glht(glm_nb_fire_croplands_anth_cat,mcp(anth_cat='Tukey'))
+summary(comp_tukey_glm_nb_fire_croplands_anth_cat)
+
+##### Now do model for rangeland and cropland classes
+
+df_r_c_subset <- subset(df_r_c,anth_group%in%c("Croplands","Rangelands"))
+df_r_c_subset$anth_cat <- as.character(df_r_c_subset$anth_cat)
+df_r_c_subset$anth_cat <- as.factor(df_r_c_subset$anth_cat)
+table(df_r_c_subset$anth_cat)
+
+boxplot(fire_count ~ anth_cat,data=df_r_c_subset,outline=F,names,las=2)
+
+glm_nb_fire_croplands_rangelands_anth_cat <- glm.nb(fire_count ~ anth_cat, data = df_r_c_subset)
+summary(glm_nb_fire_croplands_rangelands_anth_cat)
+
+comp_tukey_glm_nb_fire_croplands_rangelands_anth_cat<- glht(glm_nb_fire_croplands_rangelands_anth_cat,mcp(anth_cat='Tukey'))
+summary(comp_tukey_glm_nb_fire_croplands_rangelands_anth_cat)
 
 ############### END OF SCRIPT ###################
 

@@ -7,11 +7,11 @@
 #
 #AUTHOR: Benoit Parmentier                                                                #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 02/01/2017
+#DATE MODIFIED: 02/04/2017
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
-#COMMENTS: initial commit analyses and comparison of results to anthromes and splitting code from running models to 
+#COMMIT: Fix inputs issues in cropland classes and rerunning glm models for Yucatan 
 #TODO:
 
 #################################################################################################
@@ -186,7 +186,7 @@ if(run_relevel==TRUE){
 #Run for the overall state
 out_suffix_s <- paste("overall_",out_suffix,sep="")
 #debug(multinomial_model_fun)
-anthromes_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/gl_anthrome.tif"
+global_anthromes_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/gl_anthrome.tif"
 #anthropogenic_biome_legend.csv
 #anthromes_legend_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/anthropogenic_biome_legend.csv"
 anthromes_legend_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/anthromes_legend.csv"
@@ -195,7 +195,7 @@ df_anthromes_legend <- read.table(anthromes_legend_filename,sep=",",header=T)
 
 #### Crop to the region of interest
 
-ref_e <- extent(reg_ref_rast) #extract extent from raster object
+#ref_e <- extent(reg_ref_rast) #extract extent from raster object
 ref_e <- extent(data_df_spdf) #extract extent from raster object
 reg_outline_poly <- as(ref_e, "SpatialPolygons") #coerce raster extent object to SpatialPolygons from sp package 
 reg_outline_poly <- as(reg_outline_poly, "SpatialPolygonsDataFrame") #promote to spdf
@@ -204,17 +204,18 @@ proj4string(reg_outline_poly) <- proj4string(data_df_spdf) #Assign projection to
 r_NDVI <- raster("/home/bparmentier/Google Drive/Space_beats_time/data_yucatan_NDVI/r_NDVI_271_EDGY_11142015.rst")
 r_state <- raster("/home/bparmentier/Google Drive/FireYuca_2016/Statemuni.tif")
 r_Fire08 <- raster("/home/bparmentier/Google Drive/FireYuca_2016/Fire08.tif")
-reg_outline_poly_WGS84 <- spTransform(reg_outline_poly,CRS(projection(r_anthromes)))
-r_test <- crop(r_anthromes,reg_outline_poly_WGS84)
+r_gl_anthromes <- raster(global_anthromes_filename)
+reg_outline_poly_WGS84 <- spTransform(reg_outline_poly,CRS(projection(r_gl_anthromes)))
+r_test <- crop(r_gl_anthromes,reg_outline_poly_WGS84)
 infile_reg_outline <- paste("reg_out_line_",out_suffix,".shp",sep="") #name of newly crated shapefile with the extent
-writeOGR(reg_outline_poly,dsn= outDir,layer= sub(".shp","",infile_reg_outline), 
+writeOGR(reg_outline_poly,dsn= out_dir,layer= sub(".shp","",infile_reg_outline), 
          driver="ESRI Shapefile",overwrite_layer="TRUE")
 
 #data_df_spg <- data_spdf_CRS_WGS84 
 #gridded(data_df_spg) = TRUE
 
 data_spdf_CRS_WGS84 <- spTransform(data_df_spdf,CRS_WGS84)
-writeOGR(data_spdf_CRS_WGS84,"data_spdf_CRS_WGS84")
+#writeOGR(data_spdf_CRS_WGS84,"data_spdf_CRS_WGS84")
 
 outfile<-paste("data_spdf_CRS_WGS84_",out_suffix,sep="")
 writeOGR(data_spdf_CRS_WGS84 ,dsn= ".",layer= outfile, driver="ESRI Shapefile",overwrite_layer=TRUE)
@@ -224,12 +225,13 @@ writeOGR(data_spdf_CRS_WGS84 ,dsn= ".",layer= outfile, driver="ESRI Shapefile",o
 #spTransform(data_df_spdf)
 #r_anthromes_yucatan <- crop(r_anthromes,data_df_spdf)
 
+###Anthromes matching the Yucatan peninsula previously cropped in QGIS
 r_anthromes_yucatan <- raster("/home/bparmentier/Google Drive/FireYuca_2016/datasets/yucatan_window_anthromes.tif")
 
 #data_df$FIRE_freq 
 #rasterize using sum?
 r_fire_freq <- rasterize(data_spdf_CRS_WGS84,y=r_anthromes_yucatan,field="FIRE_freq",fun=sum)
-range(r_fire_freq)
+
 
 plot(table(as.vector(r_fire_freq)),type="h",
      ylab="Frequency of Fire Freq values in 10km2 pixels",xlab="Fire freq value")
@@ -239,15 +241,14 @@ plot(table(as.vector(r_fire_freq)),type="h",
      xlim=c(0,500))
 table(as.vector(r_fire_freq))
 
-df_fire_anthromes <- extract(r_fire_freq,r_anthromes_yucatan)
-tb <- crosstab(r_test,r_anthromes_yucatan)
-r_c <-stack(r_anthromes_yucatan,r_test)
+#df_fire_anthromes <- extract(r_fire_freq,r_anthromes_yucatan)
+#tb <- crosstab(r_test,r_anthromes_yucatan)
 
 cat_names <- df_anthromes_legend$LABEL
 
-res_pix<-960
-col_mfrow<-1
-row_mfrow<-1
+#res_pix<-960
+#col_mfrow<-1
+#row_mfrow<-1
 #png(filename=paste("Figure1_paper1_wwf_ecoreg_Alaska",out_prefix,".png",sep=""),
 #    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
 #par(mfrow=c(1,2))
@@ -268,15 +269,44 @@ legend("topleft",legend=cat_names,title="Anthromes",
 
 plot(r_fire_freq,main="Fire frequency count over 2001-2008")
 
+### Reclass: into fewer groups
+r_anthromes_yucatan <- raster("/home/bparmentier/Google Drive/FireYuca_2016/datasets/yucatan_window_anthromes.tif")
+freq(r_anthromes_yucatan)
+df_freq <- as.data.frame(freq(r_anthromes_yucatan))
+
+df_freq <- merge(df_freq,df_anthromes_legend,by.x="value",by.y="Grid.Value")
+
+df_freq$group_val <- c(1,1,2,2,2,3,3,3,3,3,4,4,4,5,5,6,6) #This reclasses anthromes categories in groups
+
+r_group_anthromes_yucatan <- r_anthromes_yucatan
+df_subs <- subset(df_freq,select=c("value","group_val"))
+r_group_anthromes_yucatan <- subs(x=r_group_anthromes_yucatan,y=df_subs)
+
+col_group <- c("dark grey","dark blue","yellowgreen","brown","darkgreen","darkorange")
+
+plot(r_group_anthromes_yucatan,col=col_group,legend=FALSE,axes="FALSE")
+legend("topleft",legend=unique(df_freq$GROUP),title="Anthromes",
+       pt.cex=1.1,cex=1.1,fill=col_group,bty="n")
+
+barplot(df_freq$count,names.arg=df_freq$LABEL,angle="90",las=2)
+barplot(df_freq$count,names.arg=df_freq$group_val,angle="90",las=2)
+
 ############## Model the relationship ########
 
+r_c <-stack(r_anthromes_yucatan,r_group_anthromes_yucatan,r_fire_freq)
 df_r_c <- as.data.frame(r_c)
-names(df_r_c) <- c("cat","fire_count")
+names(df_r_c) <- c("cat","group_cat","fire_count")
 
 df_r_c <- merge(df_r_c ,df_anthromes_legend,by.x="cat",by.y="Grid.Value")
 dim(df_r_c) #2191x4
 
 freq(r_anthromes_yucatan)
+
+### Fix issue with Cropland groups and classes!!
+df_r_c$GROUP <- as.character(df_r_c$GROUP)
+table(df_r_c$GROUP)
+#if(df_r_c)
+unique(df_r_c$GROUP)
 
 df_r_c$anth_cat <- as.factor(df_r_c$LABEL)
 df_r_c$anth_group <-  as.factor(df_r_c$GROUP)
@@ -286,11 +316,11 @@ df_anthromes_legend
 df_anth_cat_combined <- merge(df_cat_mean,df_anthromes_legend,by.x="cat",by.y="Grid.Value")
 View(df_anth_cat_combined)
 
-barplot(df_combined$fire_count,names.arg=df_combined$LABEL,anble="90",las=2)
-barplot(df_combined$fire_count,names.arg=df_combined$LABEL,angle="90",las=2,horiz=T)
+barplot(df_anth_cat_combined$fire_count,names.arg=df_anth_cat_combined$LABEL,angle="90",las=2)
+barplot(df_anth_cat_combined$fire_count,names.arg=df_anth_cat_combined$LABEL,angle="90",las=2,horiz=T)
 boxplot(fire_count~anth_group, df_r_c, outline=F)
 
-boxplot(log_fire~cat, df_r_c, outline=F)
+#boxplot(log_fire~cat, df_r_c, outline=F)
 #,names=df_anthromes_legend$LABEL)
 
 ##############################
@@ -303,11 +333,14 @@ df_r_c <- df_r_c[!is.na(df_r_c$fire_count),]
 sum(is.na(df_r_c$GROUP))
 
 glm_fire <- glm(fire_count~cat,family="poisson",data=df_r_c)
+
 glm_fire_anth_cat <- glm(fire_count~anth_cat,family="poisson",data=df_r_c)
 
 glm_fire_anth_group <- glm(fire_count~anth_group,family="poisson",data=df_r_c)
 summary(glm_fire_anth_group)
 
+names(glm_nb_anth_group)
+View(glm_nb_anth_cat$model)
 df_r_c$fire_count
 unique(df_r_c$anth_group)
 
@@ -316,12 +349,11 @@ unique(df_r_c$anth_group)
 #http://www.ats.ucla.edu/stat/r/dae/poissonreg.htm
 #https://onlinecourses.science.psu.edu/stat504/node/169
 
+#lm_fire_anth_cat <- lm(fire_count ~ anth_cat,df_r_c)
+#summary(lm_fire_anth_cat)
 
-lm_fire_anth_cat <- lm(fire_count ~ anth_cat,df_r_c)
-summary(lm_fire_anth_cat)
-
-lm_fireby_group <- lm(fire_count ~ anth_cat,df_r_c)
-summary(lm_fire2)
+#lm_fireby_group <- lm(fire_count ~ anth_cat,df_r_c)
+#summary(lm_fire2)
 
 histogram(log(df_r_c$fire_count))
 df_r_c$log_fire <- log(df_r_c$fire_count)
@@ -346,13 +378,21 @@ hist(df_r_c$fire_count)
 #with(dat, tapply(daysabs, prog, function(x) {
 #  sprintf("M (SD) = %1.2f (%1.2f)", mean(x), sd(x))
 #}))
+#http://www.ats.ucla.edu/stat/r/dae/nbreg.htm
 library(MASS)
 #Use the glm.nb from the MASS package to run the negative bionomial model
 glm_nb_anth_group <- glm.nb(fire_count ~ anth_group, data = df_r_c)
 glm_nb_anth_cat <- glm.nb(fire_count ~ anth_cat, data = df_r_c)
 
-glm_fire <- glm(fire_count~cat,family="poisson",data=df_r_c)
-glm_fire_anth_cat <- glm(fire_count~anth_cat,family="poisson",data=df_r_c)
+
+X2 <- 2 * (logLik(glm_nb_anth_group ) - logLik(glm_fire_anth_group))
+X2
+#'log Lik.' 135072.3 (df=8)
+pchisq(X2, df = 1, lower.tail=FALSE)
+#'log Lik.' 0 (df=8)
+
+glm_nb_anth_group$theta
+
 
 ############### END OF SCRIPT ###################
 

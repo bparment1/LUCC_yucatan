@@ -11,7 +11,7 @@
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
-#COMMIT: run glm model for anthromes categories within croplands 
+#COMMIT: adding figures and saving tables for the paper
 #TODO:
 
 #################################################################################################
@@ -227,7 +227,9 @@ writeOGR(data_spdf_CRS_WGS84 ,dsn= ".",layer= outfile, driver="ESRI Shapefile",o
 #spTransform(data_df_spdf)
 #r_anthromes_yucatan <- crop(r_anthromes,data_df_spdf)
 
+#####################
 ###Anthromes matching the Yucatan peninsula previously cropped in QGIS
+
 r_anthromes_yucatan <- raster("/home/bparmentier/Google Drive/FireYuca_2016/datasets/yucatan_window_anthromes.tif")
 
 #data_df$FIRE_freq 
@@ -247,12 +249,6 @@ table(as.vector(r_fire_freq))
 
 cat_names <- df_anthromes_legend$LABEL
 
-#res_pix<-960
-#col_mfrow<-1
-#row_mfrow<-1
-#png(filename=paste("Figure1_paper1_wwf_ecoreg_Alaska",out_prefix,".png",sep=""),
-#    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
-#par(mfrow=c(1,2))
 nb_col <- length(cat_names)
 col_anth<-rainbow(nb_col)
 #col_eco[16]<-"brown"
@@ -260,7 +256,6 @@ col_anth<-rainbow(nb_col)
 #col_eco[7]<-"lightblue"
 #col_eco[6]<-"grey"
 #col_eco[12]<-"yellowgreen"
-X11()
 plot(r_anthromes_yucatan,col=col_anth,legend=FALSE,axes="FALSE")
 legend("topleft",legend=cat_names,title="Anthromes",
        pt.cex=1.1,cex=1.1,fill=col_anth,bty="n")
@@ -283,16 +278,40 @@ r_group_anthromes_yucatan <- r_anthromes_yucatan
 df_subs <- subset(df_freq,select=c("value","group_val"))
 r_group_anthromes_yucatan <- subs(x=r_group_anthromes_yucatan,y=df_subs)
 
-r_group_anthromes_yucatan_filename <- file.path(out_dir,paste0("r_group_anthromes_yucatan","_",out_suffix,".tif")
-writeRaster(r_group_anthromes_yucatan,"")
+r_group_anthromes_yucatan_filename <- file.path(out_dir,paste0("r_group_anthromes_yucatan","_",out_suffix,".tif"))
+writeRaster(r_group_anthromes_yucatan,r_group_anthromes_yucatan_filename)
 col_group <- c("dark grey","dark blue","yellowgreen","brown","darkgreen","darkorange")
 
 plot(r_group_anthromes_yucatan,col=col_group,legend=FALSE,axes="FALSE")
 legend("topleft",legend=unique(df_freq$GROUP),title="Anthromes",
-       pt.cex=1.1,cex=1.1,fill=col_group,bty="n")
+       pt.cex=1.1,cex=1.2,fill=col_group,bty="n")
 
 barplot(df_freq$count,names.arg=df_freq$LABEL,angle="90",las=2)
 barplot(df_freq$count,names.arg=df_freq$group_val,angle="90",las=2)
+
+######### Save combined figure 1 for paper: for fire and anthromes groups
+r_anthromes_yucatan[]
+minValue(r_fire_freq)
+max_val <- maxValue(r_fire_freq)
+r_fire_freq[r_fire_freq==max_val] <- NA
+
+res_pix<-960
+col_mfrow<-1
+row_mfrow<-0.5 #set hight as half
+png(filename=paste("Figure1_yucatan_fire_and_anthromes_at_10km2_",out_suffix,".png",sep=""),
+    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
+par(mfrow=c(1,2))
+
+palette_fire <- colorRampPalette(c("lightgreen","yellow","red","darkred"))
+#temp.colors <- matlab.like(18)
+plot(r_fire_freq,main="Fire frequency count over 2001-2008",col=palette_fire(256) )
+
+plot(r_group_anthromes_yucatan,col=col_group,legend=FALSE,axes="T",
+     main="Anthromes Groups")
+legend("topleft",legend=unique(df_freq$GROUP),title="Anthromes",
+       pt.cex=1.1,cex=1.2,fill=col_group,bty="n")
+
+dev.off()
 
 ############## Model the relationship ########
 
@@ -321,7 +340,6 @@ View(df_anth_cat_combined)
 
 barplot(df_anth_cat_combined$fire_count,names.arg=df_anth_cat_combined$LABEL,angle="90",las=2)
 barplot(df_anth_cat_combined$fire_count,names.arg=df_anth_cat_combined$LABEL,angle="90",las=2,horiz=T)
-boxplot(fire_count~anth_group, df_r_c, outline=F)
 
 #boxplot(log_fire~cat, df_r_c, outline=F)
 #,names=df_anthromes_legend$LABEL)
@@ -409,21 +427,6 @@ comp_tukey_glm_nb_fire_anth_group <- glht(glm_nb_fire_anth_group,mcp(anth_group=
 comp_tukey_glm_nb_fire_anth_group
 summary(comp_tukey_glm_nb_fire_anth_group)
 
-##### Now do model for cropland classes
-
-df_r_c_subset <- subset(df_r_c,anth_group==("Croplands"))
-df_r_c_subset$anth_cat <- as.character(df_r_c_subset$anth_cat)
-df_r_c_subset$anth_cat <- as.factor(df_r_c_subset$anth_cat)
-table(df_r_c_subset$anth_cat)
-
-boxplot(fire_count ~ anth_cat,data=df_r_c_subset,outline=F)
-
-glm_nb_fire_croplands_anth_cat <- glm.nb(fire_count ~ anth_cat, data = df_r_c_subset)
-summary(glm_nb_fire_croplands_anth_cat)
-
-comp_tukey_glm_nb_fire_croplands_anth_cat<- glht(glm_nb_fire_croplands_anth_cat,mcp(anth_cat='Tukey'))
-summary(comp_tukey_glm_nb_fire_croplands_anth_cat)
-
 ##### Now do model for rangeland and cropland classes
 
 df_r_c_subset <- subset(df_r_c,anth_group%in%c("Croplands","Rangelands"))
@@ -438,6 +441,62 @@ summary(glm_nb_fire_croplands_rangelands_anth_cat)
 
 comp_tukey_glm_nb_fire_croplands_rangelands_anth_cat<- glht(glm_nb_fire_croplands_rangelands_anth_cat,mcp(anth_cat='Tukey'))
 summary(comp_tukey_glm_nb_fire_croplands_rangelands_anth_cat)
+
+##### Now do model for cropland classes
+
+df_r_c_subset <- subset(df_r_c,anth_group==("Croplands"))
+df_r_c_subset$anth_cat <- as.character(df_r_c_subset$anth_cat)
+df_r_c_subset$anth_cat <- as.factor(df_r_c_subset$anth_cat)
+table(df_r_c_subset$anth_cat)
+
+glm_nb_fire_croplands_anth_cat <- glm.nb(fire_count ~ anth_cat, data = df_r_c_subset)
+summary(glm_nb_fire_croplands_anth_cat)
+
+comp_tukey_glm_nb_fire_croplands_anth_cat<- glht(glm_nb_fire_croplands_anth_cat,mcp(anth_cat='Tukey'))
+summary(comp_tukey_glm_nb_fire_croplands_anth_cat)
+
+res_pix<-960
+col_mfrow<-1
+row_mfrow<-0.5 #set hight as half
+
+png(filename=paste("Figure2_yucatan_fire_boxplots_",out_suffix,".png",sep=""),
+    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
+par(mfrow=c(1,2))
+
+#par(mar=c(6, 4.1, 4.1, 2.1))
+par(mar=c(7, 4.5, 4.5, 2.3))
+
+labels_group <- as.character(unique(df_r_c$anth_group))
+labels_group <- c("Croplands ","Dense settlements ","Forested ","Rangelands ","Villages ","Wildlands ")
+#labels_cat <- aas.character(unique(df_r_c_subset$anth_cat))
+labels_cat <- c("Residential irrigated ","Residential rainfed mosaic ","Populated irrigated ",
+                "Populated rainfed ","Remote croplands ")
+#labels_cat <- c("Populated irrigated ","Populated rainfed ","Residential irrigated ","Residential rainfed mosaic ",,
+#                ,"Remote cropland ")
+#as.character(unique(df_r_c_subset$anth_cat))
+boxplot(fire_count~anth_group, df_r_c, outline=F,main="Fire Frequency by Group Anthromes",
+        col = "lightgray", xaxt = "n",  xlab = "")
+# x axis with ticks but without labels
+axis(1, labels = FALSE)
+
+# Plot x labs at default x position
+text(x =  seq_along(labels_group), y = par("usr")[3] - 1, srt = 40, adj = 1,
+     labels = labels_group, xpd = TRUE)
+
+boxplot(fire_count ~ anth_cat,data=df_r_c_subset,outline=F,main="Fire Frequency within Croplands Anthromes",
+        col = "lightgray", xaxt = "n",  xlab = "")
+# x axis with ticks but without labels
+axis(1, labels = FALSE)
+
+# Plot x labs at default x position
+text(x =  seq_along(labels_cat), y = par("usr")[3] - 1, srt = 40, adj = 1,
+     labels = labels_cat, xpd = TRUE)
+
+#boxplot(count ~ spray, data = InsectSprays,
+#        col = "lightgray", xaxt = "n",  xlab = "")
+
+dev.off()
+
 
 ############### END OF SCRIPT ###################
 

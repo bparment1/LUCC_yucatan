@@ -2,16 +2,17 @@
 #############################         LAND COVER CHANGE          #######################################
 #This script reads data extracted from MODIS FIRE time series                             
 #The goal is to show how fire can be used as proxy for land cover change in the region.      
-#This script implements a spatial logit model with explantory variables.                                                     #
-#
+#This script implements a spatial multinomial logit model with explantory variables.                                                     #
+#The link between fire as a tool for anthropogenic changes is also explore with the anthrome dataset.
+#We used a non negative binomial model with Tukey to examine differences between anthromes classes.
 #
 #AUTHOR: Benoit Parmentier                                                                #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 02/04/2017
+#DATE MODIFIED: 02/06/2017
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
-#COMMIT: adding figures and saving tables for the paper
+#COMMIT: modifying Tukey table and some clean up of code
 #TODO:
 
 #################################################################################################
@@ -43,7 +44,7 @@ library(rgeos)                           # topology and vector spatial queries a
 library(afex)                            # functions related to ANOVA
 library(car)
 library(MASS)                            # contains negative binomial model
-library(multcomp)                        # has Tukey comparison
+library(multcomp)                        # contains Tukey comparison
 
 ###### Functions used in this script
 
@@ -82,34 +83,9 @@ coord_names <- c("POINT_X","POINT_Y") #PARAM 11
 zonal_var_name <- "state" #name of the variable to use to run the model by zone, Yucatan state here
 y_var_name <- "fpnfpch"
 ref_var_name <- ""
-run_relevel <- TRUE
 num_cores <- 3
-
-list_models<-c("y_var ~ cy_r",
-               "y_var ~ cy_r + FIRE_pre07",
-               "y_var ~ cy_r + FIRE_intensity",
-               "y_var ~ cy_r + FIRE_bool",
-               "y_var ~ cy_r +  
-                      dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
-                      elevation + slope_deg + landcover + cattledensity + ejido + 
-                      popdens_change + precip + protegidas + soil",
-               "y_var ~ cy_r + FIRE_bool +
-                      dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
-                      elevation + slope_deg + landcover + cattledensity + ejido + 
-                      popdens_change + precip + protegidas + soil",
-               "y_var ~ cy_r + FIRE_pre07 + 
-                      dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
-                      elevation + slope_deg + landcover + cattledensity + ejido + 
-                      popdens_change + precip + protegidas + soil",
-               "y_var ~ cy_r + FIRE_intensity + 
-                      dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
-                      elevation + slope_deg + landcover + cattledensity + ejido + 
-                      popdens_change + precip + protegidas + soil",
-               "y_var ~ cy_r + FIRE_freq + 
-                      dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
-                      elevation + slope_deg + landcover + cattledensity + ejido + 
-                      popdens_change + precip + protegidas + soil"
-)
+#disable scientific notation
+options(scipen = 999)
 
 ################# START SCRIPT ###############################
 
@@ -266,7 +242,8 @@ legend("topleft",legend=cat_names,title="Anthromes",
 plot(r_fire_freq,main="Fire frequency count over 2001-2008")
 
 ### Reclass: into fewer groups
-r_anthromes_yucatan <- raster("/home/bparmentier/Google Drive/FireYuca_2016/datasets/yucatan_window_anthromes.tif")
+r_anthromes_yucatan_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/yucatan_window_anthromes.tif"
+r_anthromes_yucatan <- raster(r_anthromes_yucatan_filename)
 freq(r_anthromes_yucatan)
 df_freq <- as.data.frame(freq(r_anthromes_yucatan))
 
@@ -279,7 +256,9 @@ df_subs <- subset(df_freq,select=c("value","group_val"))
 r_group_anthromes_yucatan <- subs(x=r_group_anthromes_yucatan,y=df_subs)
 
 r_group_anthromes_yucatan_filename <- file.path(out_dir,paste0("r_group_anthromes_yucatan","_",out_suffix,".tif"))
-writeRaster(r_group_anthromes_yucatan,r_group_anthromes_yucatan_filename)
+writeRaster(r_group_anthromes_yucatan,r_group_anthromes_yucatan_filename,overwrite=T)
+
+### Set color palette for the Anthromes group map
 col_group <- c("dark grey","dark blue","yellowgreen","brown","darkgreen","darkorange")
 
 plot(r_group_anthromes_yucatan,col=col_group,legend=FALSE,axes="FALSE")
@@ -290,7 +269,8 @@ barplot(df_freq$count,names.arg=df_freq$LABEL,angle="90",las=2)
 barplot(df_freq$count,names.arg=df_freq$group_val,angle="90",las=2)
 
 ######### Save combined figure 1 for paper: for fire and anthromes groups
-r_anthromes_yucatan[]
+
+#remove extreme values in fire count which is due to burning plant
 minValue(r_fire_freq)
 max_val <- maxValue(r_fire_freq)
 r_fire_freq[r_fire_freq==max_val] <- NA
@@ -311,6 +291,8 @@ plot(r_group_anthromes_yucatan,col=col_group,legend=FALSE,axes="T",
 legend("topleft",legend=unique(df_freq$GROUP),title="Anthromes",
        pt.cex=1.1,cex=1.2,fill=col_group,bty="n")
 
+#scale_position<-c(450000, 600000)
+#arrow_position<-c(900000, 600000)
 dev.off()
 
 ############## Model the relationship ########
@@ -409,7 +391,7 @@ names(agg_anth_group) <- c("anth_group","mean","var")
 
 View(agg_anth_group)
 
-X2 <- 2 * (logLik(glm_nb_anth_group ) - logLik(glm_fire_anth_group))
+X2 <- 2 * (logLik(glm_nb_fire_anth_group) - logLik(glm_fire_anth_group))
 X2
 #'log Lik.' 135072.3 (df=8)
 pchisq(X2, df = 1, lower.tail=FALSE)
@@ -425,7 +407,42 @@ summary(comp_tukey_glm_fire_anth_group)
 
 comp_tukey_glm_nb_fire_anth_group <- glht(glm_nb_fire_anth_group,mcp(anth_group='Tukey'))
 comp_tukey_glm_nb_fire_anth_group
-summary(comp_tukey_glm_nb_fire_anth_group)
+summary_tukey_glm_nb_fire_anth_group <- summary(comp_tukey_glm_nb_fire_anth_group)
+str(summary_tukey_glm_nb_fire_anth_group)
+names((summary_tukey_glm_nb_fire_anth_group))
+class(summary_tukey_glm_nb_fire_anth_group$test$coefficients)
+length((summary_tukey_glm_nb_fire_anth_group$test$coefficients))
+names(summary_tukey_glm_nb_fire_anth_group$test)
+
+## Generate summary Tukey output table for paper
+#This is the ANOVA like analysis with pairwise comparison
+
+tukey_df_glm_nb_anth_group <- data.frame(coefficients=summary_tukey_glm_nb_fire_anth_group$test$coefficients,
+                                         standard_error=summary_tukey_glm_nb_fire_anth_group$test$sigma,
+                                         t-stat=summary_tukey_glm_nb_fire_anth_group$test$tstat,
+                                         p_values=summary_tukey_glm_nb_fire_anth_group$test$pvalues)
+
+format_digits <- 4
+pairwise_comparison <- row.names(df_tukey_glm_nb_anth_group)
+
+df_tukey_glm_nb_anth_group <- as.data.frame(
+        cbind(pairwise_comparison=pairwise_comparison,
+              format(summary_tukey_glm_nb_fire_anth_group$test$coefficients,digits=format_digits),
+              format(summary_tukey_glm_nb_fire_anth_group$test$sigma,digits=format_digits),
+              format(summary_tukey_glm_nb_fire_anth_group$test$tstat,digits=format_digits),
+              format(as.numeric(summary_tukey_glm_nb_fire_anth_group$test$pvalues,digits=format_digits)))
+        )
+
+
+
+names(df_tukey_glm_nb_anth_group) <- c("pairwise_comparison","coefficients","standard_error","t-stat","p_values")
+row.names(df_tukey_glm_nb_anth_group) <- NULL
+df_tukey_glm_nb_anth_group$p_values <- round(as.numeric(as.character(df_tukey_glm_nb_anth_group$p_values)), digits = 4)
+View(df_tukey_glm_nb_anth_group)
+
+## write out table output:
+df_tukey_glm_nb_anth_group_filename <- file.path(out_dir,paste0("df_tukey_glm_nb_anth_group_",out_suffix,".txt"))
+write.table(df_tukey_glm_nb_anth_group, df_tukey_glm_nb_anth_group_filename,row.names=F,sep=",")
 
 ##### Now do model for rangeland and cropland classes
 
@@ -454,6 +471,51 @@ summary(glm_nb_fire_croplands_anth_cat)
 
 comp_tukey_glm_nb_fire_croplands_anth_cat<- glht(glm_nb_fire_croplands_anth_cat,mcp(anth_cat='Tukey'))
 summary(comp_tukey_glm_nb_fire_croplands_anth_cat)
+
+
+##### write out Tukey comparison
+
+
+#### Output table for anth_cat for croplands
+
+#debug(generate_tukey_table)
+test_df <- generate_tukey_table(comp_tukey_glm_nb_fire_croplands_anth_cat,format_digits,out_dir,out_suffix)
+
+generate_tukey_table <- function(comp_tukey_glm,format_digits,out_dir,out_suffix){
+  #Process output from glht Tukey pairwise comparison
+  #This assumes Poisson or Negative binomial model
+  #
+  ## Inputs:
+  #comp_tukey_glm
+  #
+  # Outputs
+  #
+  
+  ###########################
+  
+  #### Begin Script ###
+  
+  summary_comp_tukey <- summary(comp_tukey_glm)
+  pairwise_comparison <- names(summary_comp_tukey$test$coefficients)
+  df_tukey <- as.data.frame(
+    cbind(pairwise_comparison=pairwise_comparison,
+          format(summary_comp_tukey$test$coefficients,digits=format_digits),
+          format(summary_comp_tukey$test$sigma,digits=format_digits),
+          format(summary_comp_tukey$test$tstat,digits=format_digits),
+          format(as.numeric(summary_comp_tukey$test$pvalues,digits=format_digits)))
+  )
+  
+  names(df_tukey) <- c("pairwise_comparison","coefficients","standard_error","t-stat","p_values")
+  row.names(df_tukey) <- NULL
+  df_tukey$p_values <- round(as.numeric(as.character(df_tukey$p_values)), digits = 4)
+  
+  return(df_tukey)
+  
+}
+
+############
+#### Prepare figure 2 with boxplot ###
+
 
 res_pix<-960
 col_mfrow<-1

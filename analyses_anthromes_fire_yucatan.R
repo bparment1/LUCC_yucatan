@@ -8,11 +8,11 @@
 #
 #AUTHOR: Benoit Parmentier                                                                #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 02/06/2017
+#DATE MODIFIED: 02/07/2017
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
-#COMMIT: modifying Tukey table and some clean up of code
+#COMMIT: splitting functions and main script, moving tukey table formatting function
 #TODO:
 
 #################################################################################################
@@ -49,8 +49,12 @@ library(multcomp)                        # contains Tukey comparison
 ###### Functions used in this script
 
 functions_analyses_script <- "analyses_fire_yucatan_functions_05282016.R" #PARAM 1
+functions_analyses_anthromes_script <- "analyses_anthromes_fire_yucatan_functions_02072017.R" #PARAM 1
+
 script_path <- "/home/bparmentier/Google Drive/FireYuca_2016/R_scripts" #path to script #PARAM 2
+
 source(file.path(script_path,functions_analyses_script)) #source all functions used in this script 1.
+source(file.path(script_path,functions_analyses_anthromes_script)) #source all functions used in this script 1.
 
 #####  Parameters and argument set up ###########
 
@@ -406,39 +410,12 @@ comp_tukey_glm_fire_anth_group <- glht(glm_fire_anth_group,mcp(anth_group='Tukey
 summary(comp_tukey_glm_fire_anth_group)
 
 comp_tukey_glm_nb_fire_anth_group <- glht(glm_nb_fire_anth_group,mcp(anth_group='Tukey'))
-comp_tukey_glm_nb_fire_anth_group
-summary_tukey_glm_nb_fire_anth_group <- summary(comp_tukey_glm_nb_fire_anth_group)
-str(summary_tukey_glm_nb_fire_anth_group)
-names((summary_tukey_glm_nb_fire_anth_group))
-class(summary_tukey_glm_nb_fire_anth_group$test$coefficients)
-length((summary_tukey_glm_nb_fire_anth_group$test$coefficients))
-names(summary_tukey_glm_nb_fire_anth_group$test)
 
 ## Generate summary Tukey output table for paper
 #This is the ANOVA like analysis with pairwise comparison
 
-tukey_df_glm_nb_anth_group <- data.frame(coefficients=summary_tukey_glm_nb_fire_anth_group$test$coefficients,
-                                         standard_error=summary_tukey_glm_nb_fire_anth_group$test$sigma,
-                                         t-stat=summary_tukey_glm_nb_fire_anth_group$test$tstat,
-                                         p_values=summary_tukey_glm_nb_fire_anth_group$test$pvalues)
-
-format_digits <- 4
-pairwise_comparison <- row.names(df_tukey_glm_nb_anth_group)
-
-df_tukey_glm_nb_anth_group <- as.data.frame(
-        cbind(pairwise_comparison=pairwise_comparison,
-              format(summary_tukey_glm_nb_fire_anth_group$test$coefficients,digits=format_digits),
-              format(summary_tukey_glm_nb_fire_anth_group$test$sigma,digits=format_digits),
-              format(summary_tukey_glm_nb_fire_anth_group$test$tstat,digits=format_digits),
-              format(as.numeric(summary_tukey_glm_nb_fire_anth_group$test$pvalues,digits=format_digits)))
-        )
-
-
-
-names(df_tukey_glm_nb_anth_group) <- c("pairwise_comparison","coefficients","standard_error","t-stat","p_values")
-row.names(df_tukey_glm_nb_anth_group) <- NULL
-df_tukey_glm_nb_anth_group$p_values <- round(as.numeric(as.character(df_tukey_glm_nb_anth_group$p_values)), digits = 4)
-View(df_tukey_glm_nb_anth_group)
+summary(comp_tukey_glm_nb_fire_anth_group )
+df_tukey_glm_nb_anth_group <- generate_tukey_table(comp_tukey_glm_nb_fire_anth_group ,format_digits,out_dir,out_suffix)
 
 ## write out table output:
 df_tukey_glm_nb_anth_group_filename <- file.path(out_dir,paste0("df_tukey_glm_nb_anth_group_",out_suffix,".txt"))
@@ -472,50 +449,18 @@ summary(glm_nb_fire_croplands_anth_cat)
 comp_tukey_glm_nb_fire_croplands_anth_cat<- glht(glm_nb_fire_croplands_anth_cat,mcp(anth_cat='Tukey'))
 summary(comp_tukey_glm_nb_fire_croplands_anth_cat)
 
-
 ##### write out Tukey comparison
-
-
 #### Output table for anth_cat for croplands
 
 #debug(generate_tukey_table)
-test_df <- generate_tukey_table(comp_tukey_glm_nb_fire_croplands_anth_cat,format_digits,out_dir,out_suffix)
+df_tukey_glm_nb_croplands_anth_cat <- generate_tukey_table(comp_tukey_glm_nb_fire_croplands_anth_cat,format_digits,out_dir,out_suffix)
 
-generate_tukey_table <- function(comp_tukey_glm,format_digits,out_dir,out_suffix){
-  #Process output from glht Tukey pairwise comparison
-  #This assumes Poisson or Negative binomial model
-  #
-  ## Inputs:
-  #comp_tukey_glm
-  #
-  # Outputs
-  #
-  
-  ###########################
-  
-  #### Begin Script ###
-  
-  summary_comp_tukey <- summary(comp_tukey_glm)
-  pairwise_comparison <- names(summary_comp_tukey$test$coefficients)
-  df_tukey <- as.data.frame(
-    cbind(pairwise_comparison=pairwise_comparison,
-          format(summary_comp_tukey$test$coefficients,digits=format_digits),
-          format(summary_comp_tukey$test$sigma,digits=format_digits),
-          format(summary_comp_tukey$test$tstat,digits=format_digits),
-          format(as.numeric(summary_comp_tukey$test$pvalues,digits=format_digits)))
-  )
-  
-  names(df_tukey) <- c("pairwise_comparison","coefficients","standard_error","t-stat","p_values")
-  row.names(df_tukey) <- NULL
-  df_tukey$p_values <- round(as.numeric(as.character(df_tukey$p_values)), digits = 4)
-  
-  return(df_tukey)
-  
-}
+## write out table output:
+df_tukey_glm_nb_anth_group_filename <- file.path(out_dir,paste0("df_tukey_glm_nb_croplands_anth_cat_",out_suffix,".txt"))
+write.table(df_tukey_glm_nb_croplands_anth_cat, df_tukey_glm_nb_anth_group_filename,row.names=F,sep=",")
 
 ############
 #### Prepare figure 2 with boxplot ###
-
 
 res_pix<-960
 col_mfrow<-1
@@ -560,5 +505,5 @@ text(x =  seq_along(labels_cat), y = par("usr")[3] - 1, srt = 40, adj = 1,
 dev.off()
 
 
-############### END OF SCRIPT ###################
+##################  END OF SCRIPT ######################
 

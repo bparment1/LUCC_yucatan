@@ -12,8 +12,10 @@
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
-#COMMIT: splitting functions and main script, moving tukey table formatting function
 #TODO:
+#COMMENTS:
+#
+#COMMIT: clean up of code and check of results for negative binomial model
 
 #################################################################################################
 
@@ -91,6 +93,12 @@ num_cores <- 3
 #disable scientific notation
 options(scipen = 999)
 
+### Anthropogenic biomes/anthromes inputs:
+global_anthromes_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/gl_anthrome.tif"
+#anthromes_legend_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/anthropogenic_biome_legend.csv"
+anthromes_legend_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/anthromes_legend.csv"
+anthromes_yucatan_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/yucatan_window_anthromes.tif"
+
 ################# START SCRIPT ###############################
 
 ### PART I READ AND PREPARE DATA FOR REGRESSIONS #######
@@ -111,7 +119,8 @@ if(create_out_dir_param==TRUE){
   setwd(out_dir) #use previoulsy defined directory
 }
 
-data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
+data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,
+                     sep=",")
 #data_Hansen <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
 
 #Create the count variable
@@ -137,10 +146,6 @@ data_df_spdf$state <- as.character(data_df_spdf$FIRST_NOM_)
 table(data_df_spdf$state)
 sum(table(data_df_spdf$state))
 nrow(data_df_spdf)
-#> sum(table(data_df_spdf$state))
-#[1] 136311
-#> nrow(data_df_spdf)
-#[1] 136904
 
 ### Quick check of plotting variables
 spplot(data_df_spdf,"cattledensity")
@@ -154,26 +159,9 @@ barplot(table(data_df[[y_var_name]]))
 
 #### Part II: compare anthromes and fire data ####
 
-#### Run modeling series A ###
-
-#run overall for the whole Yucatan peninsula
-
-#make this a function?
-
-#debug(run_multinom_mod)
-if(run_relevel==TRUE){
-  data_df_spdf[[y_var_name]] <- as.factor(data_df_spdf[[y_var_name]])
-}
-
 #Run for the overall state
 out_suffix_s <- paste("overall_",out_suffix,sep="")
-#debug(multinomial_model_fun)
-global_anthromes_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/gl_anthrome.tif"
-#anthropogenic_biome_legend.csv
-#anthromes_legend_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/anthropogenic_biome_legend.csv"
-anthromes_legend_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/gl-anthrome-geotif/anthromes_legend.csv"
 df_anthromes_legend <- read.table(anthromes_legend_filename,sep=",",header=T)
-#plot(r_anthromes)
 
 #### Crop to the region of interest
 
@@ -183,18 +171,13 @@ reg_outline_poly <- as(ref_e, "SpatialPolygons") #coerce raster extent object to
 reg_outline_poly <- as(reg_outline_poly, "SpatialPolygonsDataFrame") #promote to spdf
 proj4string(reg_outline_poly) <- proj4string(data_df_spdf) #Assign projection to spdf
 
-r_NDVI <- raster("/home/bparmentier/Google Drive/Space_beats_time/data_yucatan_NDVI/r_NDVI_271_EDGY_11142015.rst")
-r_state <- raster("/home/bparmentier/Google Drive/FireYuca_2016/Statemuni.tif")
-r_Fire08 <- raster("/home/bparmentier/Google Drive/FireYuca_2016/Fire08.tif")
 r_gl_anthromes <- raster(global_anthromes_filename)
+
 reg_outline_poly_WGS84 <- spTransform(reg_outline_poly,CRS(projection(r_gl_anthromes)))
 r_test <- crop(r_gl_anthromes,reg_outline_poly_WGS84)
 infile_reg_outline <- paste("reg_out_line_",out_suffix,".shp",sep="") #name of newly crated shapefile with the extent
 writeOGR(reg_outline_poly,dsn= out_dir,layer= sub(".shp","",infile_reg_outline), 
          driver="ESRI Shapefile",overwrite_layer="TRUE")
-
-#data_df_spg <- data_spdf_CRS_WGS84 
-#gridded(data_df_spg) = TRUE
 
 data_spdf_CRS_WGS84 <- spTransform(data_df_spdf,CRS_WGS84)
 #writeOGR(data_spdf_CRS_WGS84,"data_spdf_CRS_WGS84")
@@ -202,17 +185,11 @@ data_spdf_CRS_WGS84 <- spTransform(data_df_spdf,CRS_WGS84)
 outfile<-paste("data_spdf_CRS_WGS84_",out_suffix,sep="")
 writeOGR(data_spdf_CRS_WGS84 ,dsn= ".",layer= outfile, driver="ESRI Shapefile",overwrite_layer=TRUE)
 
-# proj4string(data_df_spdf)
-#[1] "+proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
-#spTransform(data_df_spdf)
-#r_anthromes_yucatan <- crop(r_anthromes,data_df_spdf)
-
 #####################
 ###Anthromes matching the Yucatan peninsula previously cropped in QGIS
 
-r_anthromes_yucatan <- raster("/home/bparmentier/Google Drive/FireYuca_2016/datasets/yucatan_window_anthromes.tif")
+r_anthromes_yucatan <- raster(anthromes_yucatan_filename)
 
-#data_df$FIRE_freq 
 #rasterize using sum?
 r_fire_freq <- rasterize(data_spdf_CRS_WGS84,y=r_anthromes_yucatan,field="FIRE_freq",fun=sum)
 
@@ -231,11 +208,7 @@ cat_names <- df_anthromes_legend$LABEL
 
 nb_col <- length(cat_names)
 col_anth<-rainbow(nb_col)
-#col_eco[16]<-"brown"
-#col_eco[11]<-"darkgreen"
-#col_eco[7]<-"lightblue"
-#col_eco[6]<-"grey"
-#col_eco[12]<-"yellowgreen"
+
 plot(r_anthromes_yucatan,col=col_anth,legend=FALSE,axes="FALSE")
 legend("topleft",legend=cat_names,title="Anthromes",
        pt.cex=1.1,cex=1.1,fill=col_anth,bty="n")
@@ -246,7 +219,6 @@ legend("topleft",legend=cat_names,title="Anthromes",
 plot(r_fire_freq,main="Fire frequency count over 2001-2008")
 
 ### Reclass: into fewer groups
-r_anthromes_yucatan_filename <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/yucatan_window_anthromes.tif"
 r_anthromes_yucatan <- raster(r_anthromes_yucatan_filename)
 freq(r_anthromes_yucatan)
 df_freq <- as.data.frame(freq(r_anthromes_yucatan))
@@ -351,14 +323,8 @@ View(glm_nb_anth_cat$model)
 df_r_c$fire_count
 unique(df_r_c$anth_group)
 
-#Poisson regression:
-#https://onlinecourses.science.psu.edu/stat504/book/export/html/165
-#http://www.ats.ucla.edu/stat/r/dae/poissonreg.htm
-#https://onlinecourses.science.psu.edu/stat504/node/169
-
 #lm_fire_anth_cat <- lm(fire_count ~ anth_cat,df_r_c)
 #summary(lm_fire_anth_cat)
-
 #lm_fireby_group <- lm(fire_count ~ anth_cat,df_r_c)
 #summary(lm_fire2)
 
@@ -370,22 +336,6 @@ hist(df_r_c$fire_count)
 #[1] NA 52 43 62 51 34 32 26 12 41 42 31 11 24 35 33 61 25
 #> length(unique(df_r_c$cat))
 
-#### Check for over dispersion
-#Aslo do Tukey comparison
-#http://www.ats.ucla.edu/stat/r/dae/nbreg.htm
-#http://stats.stackexchange.com/questions/71961/understanding-over-dispersion-as-it-relates-to-the-poisson-and-the-neg-binomial
-#R> library(AER)
-#R> data(RecreationDemand)
-#R> rd <- glm(trips ~ ., data = RecreationDemand, family = poisson)
-#R> dispersiontest(rd,trafo=1)
-
-#Overdispersion test
-
-#with(dat, tapply(daysabs, prog, function(x) {
-#  sprintf("M (SD) = %1.2f (%1.2f)", mean(x), sd(x))
-#}))
-#http://www.ats.ucla.edu/stat/r/dae/nbreg.htm
-#Use the glm.nb from the MASS package to run the negative bionomial model
 glm_nb_fire_anth_group <- glm.nb(fire_count ~ anth_group, data = df_r_c)
 glm_nb_fire_anth_cat <- glm.nb(fire_count ~ anth_cat, data = df_r_c)
 
@@ -504,6 +454,35 @@ text(x =  seq_along(labels_cat), y = par("usr")[3] - 1, srt = 40, adj = 1,
 
 dev.off()
 
-
 ##################  END OF SCRIPT ######################
+
+### relevant links:
+#Poisson regression:
+#https://onlinecourses.science.psu.edu/stat504/book/export/html/165
+#http://www.ats.ucla.edu/stat/r/dae/poissonreg.htm
+#https://onlinecourses.science.psu.edu/stat504/node/169
+#Overdispersion test
+
+#with(dat, tapply(daysabs, prog, function(x) {
+#  sprintf("M (SD) = %1.2f (%1.2f)", mean(x), sd(x))
+#}))
+#http://www.ats.ucla.edu/stat/r/dae/nbreg.htm
+#Use the glm.nb from the MASS package to run the negative bionomial model
+#### Check for over dispersion
+#Aslo do Tukey comparison
+#http://www.ats.ucla.edu/stat/r/dae/nbreg.htm
+#http://stats.stackexchange.com/questions/71961/understanding-over-dispersion-as-it-relates-to-the-poisson-and-the-neg-binomial
+#R> library(AER)
+#R> data(RecreationDemand)
+#R> rd <- glm(trips ~ ., data = RecreationDemand, family = poisson)
+#R> dispersiontest(rd,trafo=1)
+
+#### Check for over dispersion
+#Aslo do Tukey comparison
+#http://www.ats.ucla.edu/stat/r/dae/nbreg.htm
+#http://stats.stackexchange.com/questions/71961/understanding-over-dispersion-as-it-relates-to-the-poisson-and-the-neg-binomial
+#R> library(AER)
+#R> data(RecreationDemand)
+#R> rd <- glm(trips ~ ., data = RecreationDemand, family = poisson)
+#R> dispersiontest(rd,trafo=1)
 

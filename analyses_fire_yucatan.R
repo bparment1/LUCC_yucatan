@@ -7,13 +7,15 @@
 #
 #AUTHOR: Benoit Parmentier                                                                #
 #DATE CREATED: 02/06/2016 
-#DATE MODIFIED: 05/28/2016
+#DATE MODIFIED: 03/09/2017
 #Version: 1
 #PROJECT: Land cover Change Yucatan with Marco Millones 
 #   
-#COMMENTS:  Separation between function script and main script
+#COMMENTS:  
 #TODO:
-
+#
+#COMMITS: rerunning models for study/paper
+#
 #################################################################################################
 
 #################################################################################################
@@ -63,7 +65,7 @@ CRS_reg <- CRS_WGS84 # PARAM 4
 file_format <- ".rst" #PARAM5
 NA_value <- -9999 #PARAM6
 NA_flag_val <- NA_value #PARAM7
-out_suffix <-"yucatan_CI_analyses_05292016" #output suffix for the files and ouptu folder #PARAM 8
+out_suffix <-"yucatan_CI_analyses_03092017" #output suffix for the files and ouptu folder #PARAM 8
 create_out_dir_param=TRUE #PARAM9
 id_name <- "yucatan_fire_pointid" #Column with the reference point id
 
@@ -89,23 +91,23 @@ list_models<-c("y_var ~ cy_r",
                "y_var ~ cy_r + FIRE_bool",
                "y_var ~ cy_r +  
                       dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
-                      elevation + slope_deg + landcover + cattledensity + ejido + 
+                      elevation + slope_deg + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil",
                "y_var ~ cy_r + FIRE_bool +
                       dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
-                      elevation + slope_deg + landcover + cattledensity + ejido + 
+                      elevation + slope_deg + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil",
                "y_var ~ cy_r + FIRE_pre07 + 
                       dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
-                      elevation + slope_deg + landcover + cattledensity + ejido + 
+                      elevation + slope_deg + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil",
                "y_var ~ cy_r + FIRE_intensity + 
                       dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
-                      elevation + slope_deg + landcover + cattledensity + ejido + 
+                      elevation + slope_deg + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil",
                "y_var ~ cy_r + FIRE_freq + 
                       dist_disturbed + dist_NF00 + dist_rur + dist_urb + dist_roads + 
-                      elevation + slope_deg + landcover + cattledensity + ejido + 
+                      elevation + slope_deg + cattledensity + ejido + 
                       popdens_change + precip + protegidas + soil"
 )
 
